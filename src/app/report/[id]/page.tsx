@@ -1,0 +1,157 @@
+'use client';
+import { useState, useEffect, use } from 'react';
+import styles from './page.module.css';
+
+const SKILL_LABELS: Record<string, string> = {
+  problem_solving: 'Problem Solving',
+  tradeoff_reasoning: 'Tradeoff Reasoning',
+  system_design: 'System Design',
+  edge_case_handling: 'Edge Case Handling',
+  time_complexity: 'Time Complexity',
+  communication_clarity: 'Communication',
+  star_structure: 'STAR Structure',
+  specificity: 'Specificity',
+  ownership: 'Ownership',
+  reflection: 'Reflection',
+  quantification: 'Quantification',
+};
+
+interface Report {
+  sessionId: string;
+  userName: string;
+  role: string;
+  interviewType: string;
+  overallScore: number;
+  skillScores: { skill: string; score: number; evidence: string }[];
+  strengths: string[];
+  weaknesses: string[];
+  drills: string[];
+  summary: string;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 7) return styles.scoreGreen;
+  if (score >= 5) return styles.scoreYellow;
+  return styles.scoreRed;
+}
+
+function barColor(score: number): string {
+  if (score >= 7) return 'var(--success)';
+  if (score >= 5) return 'var(--warning)';
+  return 'var(--danger)';
+}
+
+export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [report, setReport] = useState<Report | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function fetchReport() {
+      try {
+        const res = await fetch(`/api/sessions/${id}/report`);
+        if (!res.ok) throw new Error('Report not found');
+        const data = await res.json();
+        setReport(data);
+      } catch {
+        setError('Report not found. The session may still be in progress.');
+      }
+    }
+    fetchReport();
+  }, [id]);
+
+  if (error) {
+    return (
+      <div className={styles.loading}>
+        <div style={{ textAlign: 'center' }}>
+          <p>{error}</p>
+          <a href="/new" className={`${styles.actionButton} ${styles.primaryAction}`} style={{ marginTop: '1rem', display: 'inline-block' }}>
+            Start New Session
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!report) {
+    return <div className={styles.loading}>Loading report...</div>;
+  }
+
+  return (
+    <main className={styles.container}>
+      <h1 className={styles.title}>Interview Report</h1>
+      <div className={styles.meta}>
+        <span className={styles.tag}>{report.interviewType.toUpperCase()}</span>
+        <span className={styles.tag}>{report.role}</span>
+      </div>
+
+      <div className={styles.overallScore}>
+        <div className={`${styles.scoreNumber} ${scoreColor(report.overallScore)}`}>
+          {report.overallScore}/10
+        </div>
+        <div className={styles.scoreLabel}>Overall Score</div>
+      </div>
+
+      {report.skillScores.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Skill Breakdown</h2>
+          <div className={styles.skillGrid}>
+            {report.skillScores.map((s) => (
+              <div key={s.skill} className={styles.skillRow}>
+                <span className={styles.skillName}>{SKILL_LABELS[s.skill] || s.skill}</span>
+                <div className={styles.skillBarBg}>
+                  <div
+                    className={styles.skillBarFill}
+                    style={{ width: `${s.score * 10}%`, background: barColor(s.score) }}
+                  />
+                </div>
+                <span className={styles.skillScore}>{s.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {report.strengths.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Strengths</h2>
+          <ul className={styles.list}>
+            {report.strengths.map((s, i) => <li key={i}>{s}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {report.weaknesses.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Areas for Improvement</h2>
+          <ul className={styles.list}>
+            {report.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {report.drills.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Practice Drills</h2>
+          <ul className={styles.list}>
+            {report.drills.map((d, i) => <li key={i}>{d}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>Summary</h2>
+        <div className={styles.summary}>{report.summary}</div>
+      </div>
+
+      <div className={styles.actions}>
+        <a href="/new" className={`${styles.actionButton} ${styles.primaryAction}`}>
+          Start New Session
+        </a>
+        <a href="/progress" className={`${styles.actionButton} ${styles.secondaryAction}`}>
+          View Progress
+        </a>
+      </div>
+    </main>
+  );
+}

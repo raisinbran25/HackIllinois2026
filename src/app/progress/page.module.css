@@ -1,0 +1,146 @@
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 3rem 0;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sessionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sessionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.sessionRow:hover {
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
+.sessionInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tag {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}
+
+.sessionScore {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.scoreGreen { color: var(--success); }
+.scoreYellow { color: var(--warning); }
+.scoreRed { color: var(--danger); }
+
+.skillGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skillRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.skillName {
+  width: 180px;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.skillBarBg {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.skillBarFill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.skillScore {
+  width: 36px;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.actions {
+  margin-top: 2rem;
+}
+
+.actionButton {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.actionButton:hover {
+  opacity: 0.9;
+  text-decoration: none;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: var(--text-secondary);
+}

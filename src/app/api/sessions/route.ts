@@ -1,0 +1,75 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
+import { classifyInterview } from '@/lib/classifier';
+import { generateQuestion } from '@/lib/interviewer';
+import { getWeaknessProfile, buildFocusPlan } from '@/lib/adaptation';
+import { store } from '@/lib/store';
+import { Session } from '@/lib/types';
+import { INTERVIEW_PHASES, MAX_QUESTIONS } from '@/lib/constants';
+
+export async function POST(req: NextRequest) {
+  try {
+    const { userName, role, company, jobDescription } = await req.json();
+
+    if (!userName || !role || !jobDescription) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // 1. Classify interview type
+    const classification = await classifyInterview(role, company, jobDescription);
+
+    // 2. Retrieve weakness profile and build focus plan
+    const profile = await getWeaknessProfile(userName);
+    const focusPlan = buildFocusPlan(profile);
+
+    // Override difficulty if adaptation has data
+    const difficulty = focusPlan.weaknesses.length > 0 ? focusPlan.difficulty : classification.difficulty;
+
+    // 3. Build session
+    const phases = INTERVIEW_PHASES[classification.interviewType];
+    const session: Session = {
+      id: uuidv4(),
+      config: {
+        userName,
+        role,
+        company,
+        jobDescription,
+        interviewType: classification.interviewType,
+        difficulty,
+        focusPlan: focusPlan.weaknesses.length > 0 ? focusPlan : undefined,
+      },
+      messages: [],
+      questionCount: 0,
+      maxQuestions: MAX_QUESTIONS,
+      phase: phases[0],
+      phases,
+      phaseIndex: 0,
+      status: 'active',
+      createdAt: Date.now(),
+    };
+
+    // 4. Generate first question
+    const firstQuestion = await generateQuestion(session);
+    session.messages.push({
+      role: 'interviewer',
+      content: firstQuestion,
+      timestamp: Date.now(),
+    });
+    session.questionCount = 1;
+
+    // 5. Store
+    store.setSession(session.id, session);
+
+    return NextResponse.json({
+      sessionId: session.id,
+      interviewType: classification.interviewType,
+      difficulty: classification.difficulty,
+      reasoning: classification.reasoning,
+      firstQuestion,
+    });
+  } catch (err) {
+    console.error('Session creation failed:', err);
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: `Failed to create session: ${message}` }, { status: 500 });
+  }
+}
