@@ -38,7 +38,6 @@ interface Report {
   weaknesses: string[];
   drills: (string | Drill)[];
   summary: string;
-  previousSkillScores?: { skill: string; score: number }[];
 }
 
 function scoreColor(score: number): string {
@@ -158,29 +157,18 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Skill Breakdown</h2>
           <div className={styles.skillGrid}>
-            {report.skillScores.map((s) => {
-              const prevScore = report.previousSkillScores?.find((p) => p.skill === s.skill);
-              const delta = prevScore ? Math.round((s.score - prevScore.score) * 10) / 10 : null;
-              return (
-                <div key={s.skill} className={styles.skillRow}>
-                  <span className={styles.skillName}>{SKILL_LABELS[s.skill] || s.skill}</span>
-                  <div className={styles.skillBarBg}>
-                    <div
-                      className={styles.skillBarFill}
-                      style={{ width: `${s.score * 10}%`, background: barColor(s.score) }}
-                    />
-                  </div>
-                  <span className={styles.skillScore}>
-                    {s.score}
-                    {delta !== null && delta !== 0 && (
-                      <span style={{ color: delta > 0 ? 'var(--success)' : 'var(--danger)', fontSize: '0.8em', marginLeft: '0.25rem' }}>
-                        ({delta > 0 ? '+' : ''}{delta})
-                      </span>
-                    )}
-                  </span>
+            {report.skillScores.map((s) => (
+              <div key={s.skill} className={styles.skillRow}>
+                <span className={styles.skillName}>{SKILL_LABELS[s.skill] || s.skill}</span>
+                <div className={styles.skillBarBg}>
+                  <div
+                    className={styles.skillBarFill}
+                    style={{ width: `${s.score * 10}%`, background: barColor(s.score) }}
+                  />
                 </div>
-              );
-            })}
+                <span className={styles.skillScore}>{s.score}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

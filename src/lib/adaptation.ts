@@ -1,6 +1,6 @@
 import { getSupermemory } from './supermemory';
-import { WeaknessProfile, FocusPlan, Skill, Difficulty, SkillAggregate } from './types';
-import { ALL_SKILLS } from './constants';
+import { WeaknessProfile, FocusPlan, Skill, Difficulty, SkillAggregate, CategoryRecord, QuestionCategory, InterviewType } from './types';
+import { ALL_SKILLS, CATEGORIES_BY_TYPE } from './constants';
 
 /**
  * Score Aggregation: Bayesian Shrinkage with Recency Weighting
@@ -116,7 +116,7 @@ export function buildFocusPlan(profile: WeaknessProfile | null): FocusPlan {
     weaknesses: [],
     strengths: [],
     neutral: ALL_SKILLS,
-    difficulty: 'medium',
+    difficulty: 'easy',
   };
 
   if (!profile || profile.sessionCount === 0) return defaultPlan;
@@ -135,9 +135,9 @@ export function buildFocusPlan(profile: WeaknessProfile | null): FocusPlan {
     ? allAggregates.reduce((sum, a) => sum + a.weightedScore, 0) / allAggregates.length
     : 5;
 
-  let difficulty: Difficulty = 'medium';
-  if (overallAvg > 7) difficulty = 'hard';
-  if (overallAvg < 5) difficulty = 'easy';
+  let difficulty: Difficulty = 'easy';
+  if (overallAvg > 8) difficulty = 'hard';
+  else if (overallAvg > 7) difficulty = 'medium';
 
   return { weaknesses, strengths, neutral, difficulty };
 }
@@ -237,6 +237,101 @@ export async function getPastQuestions(userName: string): Promise<string[]> {
     console.error('Failed to retrieve past questions:', err);
     return [];
   }
+}
+
+/**
+ * Retrieve category history for a user from Supermemory.
+ */
+export async function getCategoryHistory(userName: string): Promise<CategoryRecord[]> {
+  try {
+    const client = getSupermemory();
+    const results = await client.search.execute({
+      q: 'category score interview performance',
+      containerTags: [`user_${userName}`],
+      filters: {
+        AND: [{ key: 'type', value: 'category_record' }],
+      },
+    });
+
+    const records: CategoryRecord[] = [];
+    if (results.results) {
+      for (const result of results.results.slice(0, 50)) {
+        try {
+          const record = JSON.parse(result.content ?? '');
+          if (record.category) records.push(record);
+        } catch {
+          // Skip unparseable
+        }
+      }
+    }
+    return records.sort((a, b) => a.timestamp - b.timestamp);
+  } catch (err) {
+    console.error('Failed to get category history:', err);
+    return [];
+  }
+}
+
+/**
+ * Store a category record in Supermemory.
+ */
+export async function storeCategoryRecord(userName: string, record: CategoryRecord): Promise<void> {
+  try {
+    const client = getSupermemory();
+    await client.add({
+      content: JSON.stringify(record),
+      containerTags: [`user_${userName}`],
+      metadata: {
+        type: 'category_record',
+        userName,
+        category: record.category,
+        createdAt: String(Date.now()),
+      },
+    });
+  } catch (err) {
+    console.error('Failed to store category record:', err);
+  }
+}
+
+/**
+ * Select the next question category using adaptive logic:
+ * - First interview: random category
+ * - If previous score >= 7.5: mark completed, pick new category
+ * - If previous score < 7.5: retry same category
+ */
+export function selectNextCategory(
+  interviewType: InterviewType,
+  categoryHistory: CategoryRecord[]
+): QuestionCategory {
+  const availableCategories = CATEGORIES_BY_TYPE[interviewType] || [];
+  if (availableCategories.length === 0) return 'general';
+
+  // No history — pick random
+  if (categoryHistory.length === 0) {
+    return availableCategories[Math.floor(Math.random() * availableCategories.length)];
+  }
+
+  // Find the most recent record
+  const lastRecord = categoryHistory[categoryHistory.length - 1];
+
+  // If last score < 7.5, retry same category
+  if (lastRecord.score < 7.5) {
+    return lastRecord.category;
+  }
+
+  // Last score >= 7.5 — mark as completed, pick a different uncompleted category
+  const completedCategories = new Set(
+    categoryHistory.filter((r) => r.completed).map((r) => r.category)
+  );
+  // Also mark the last one as completed
+  completedCategories.add(lastRecord.category);
+
+  const uncompleted = availableCategories.filter((c) => !completedCategories.has(c));
+  if (uncompleted.length > 0) {
+    return uncompleted[Math.floor(Math.random() * uncompleted.length)];
+  }
+
+  // All completed — pick random for continued practice
+  return availableCategories[Math.floor(Math.random() * availableCategories.length)];
 }
 
 export function updateWeaknessProfile(

@@ -78,6 +78,13 @@
   cursor: not-allowed;
 }
 
+.field input:disabled,
+.field textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-secondary, #1a1a1a);
+}
+
 .error {
   color: var(--danger);
   font-size: 0.9rem;

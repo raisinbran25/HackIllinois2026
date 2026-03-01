@@ -3,6 +3,39 @@ export type InterviewType = 'swe' | 'consulting' | 'product' | 'behavioral' | 'g
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type MessageRole = 'interviewer' | 'candidate';
 
+// ---- Question Categories ----
+export type SweCategory =
+  | 'arrays_strings'
+  | 'hash_maps'
+  | 'linked_lists'
+  | 'stacks_queues'
+  | 'trees'
+  | 'graphs'
+  | 'dynamic_programming'
+  | 'recursion_backtracking'
+  | 'heaps_priority_queues';
+
+export type ConsultingCategory =
+  | 'revenue_problems'
+  | 'cost_problems'
+  | 'strategic_decisions'
+  | 'investment_decisions'
+  | 'operational_bottlenecks';
+
+export type QuestionCategory = SweCategory | ConsultingCategory | string;
+
+export interface CategoryRecord {
+  category: QuestionCategory;
+  score: number;
+  completed: boolean;
+  interviewNumber: number;
+  mistakes?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
+  timestamp: number;
+  improvementDelta?: number;
+}
+
 // ---- Skill Categories ----
 export type TechnicalSkill =
   | 'problem_solving'
@@ -52,6 +85,8 @@ export interface SessionConfig {
   focusPlan?: FocusPlan;
   pastInsights?: string[];
   pastQuestions?: string[];
+  questionCategory?: QuestionCategory;
+  categoryHistory?: CategoryRecord[];
 }
 
 export interface Session {

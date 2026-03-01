@@ -11,16 +11,5 @@ export async function GET(
     return NextResponse.json({ error: 'Report not found' }, { status: 404 });
   }
 
-  // Find previous report for the same role to compute skill deltas
-  const userReports = store.getReportsByUser(report.userName);
-  let previousSkillScores: { skill: string; score: number }[] | undefined;
-  for (let i = userReports.length - 1; i >= 0; i--) {
-    const prev = userReports[i];
-    if (prev.sessionId !== id && prev.role === report.role && prev.interviewType === report.interviewType) {
-      previousSkillScores = prev.skillScores.map((s) => ({ skill: s.skill, score: s.score }));
-      break;
-    }
-  }
-
-  return NextResponse.json({ ...report, previousSkillScores });
+  return NextResponse.json(report);
 }
