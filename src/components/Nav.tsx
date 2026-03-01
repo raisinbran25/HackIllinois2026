@@ -13,7 +13,10 @@ export default function Nav() {
 
   return (
     <nav className={styles.nav}>
-      <a href="/" className={styles.logo}>InterviewIQ</a>
+      <a href="/" className={styles.logo}>
+        <span className={styles.logoMark} aria-hidden="true">◆</span>
+        InterviewIQ
+      </a>
       <div className={styles.links}>
         {isInSession ? (
           // During interview: only New Session

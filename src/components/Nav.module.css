@@ -20,12 +20,18 @@
   text-decoration: none !important;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   transition: color var(--transition-fast);
 }
 
 .logo:hover {
   color: var(--primary) !important;
+}
+
+.logoMark {
+  color: var(--primary);
+  font-size: 0.65rem;
+  flex-shrink: 0;
 }
 
 .links {

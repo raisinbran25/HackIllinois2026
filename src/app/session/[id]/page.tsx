@@ -55,6 +55,53 @@ function renderContent(text: string) {
   );
 }
 
+// Fixed confetti particle positions — deterministic, no randomness at render time
+const CONFETTI_PARTICLES = [
+  { x: '2%',  delay: 0,   color: '#4A6CF7' },
+  { x: '6%',  delay: 40,  color: '#C9A227' },
+  { x: '10%', delay: 15,  color: '#2EA043' },
+  { x: '14%', delay: 60,  color: '#4A6CF7' },
+  { x: '18%', delay: 25,  color: '#C9A227' },
+  { x: '22%', delay: 75,  color: '#2EA043' },
+  { x: '26%', delay: 10,  color: '#4A6CF7' },
+  { x: '30%', delay: 50,  color: '#C9A227' },
+  { x: '34%', delay: 35,  color: '#2EA043' },
+  { x: '38%', delay: 70,  color: '#4A6CF7' },
+  { x: '42%', delay: 5,   color: '#C9A227' },
+  { x: '46%', delay: 45,  color: '#2EA043' },
+  { x: '50%', delay: 20,  color: '#4A6CF7' },
+  { x: '54%', delay: 65,  color: '#C9A227' },
+  { x: '58%', delay: 30,  color: '#2EA043' },
+  { x: '62%', delay: 80,  color: '#4A6CF7' },
+  { x: '66%', delay: 12,  color: '#C9A227' },
+  { x: '70%', delay: 55,  color: '#2EA043' },
+  { x: '74%', delay: 38,  color: '#4A6CF7' },
+  { x: '78%', delay: 68,  color: '#C9A227' },
+  { x: '82%', delay: 22,  color: '#2EA043' },
+  { x: '86%', delay: 48,  color: '#4A6CF7' },
+  { x: '90%', delay: 8,   color: '#C9A227' },
+  { x: '94%', delay: 72,  color: '#2EA043' },
+  { x: '98%', delay: 32,  color: '#4A6CF7' },
+];
+
+function ConfettiOverlay() {
+  return (
+    <div className={styles.confettiOverlay}>
+      {CONFETTI_PARTICLES.map((p, i) => (
+        <div
+          key={i}
+          className={styles.confettiDot}
+          style={{
+            left: p.x,
+            background: p.color,
+            animationDelay: `${p.delay}ms`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -64,6 +111,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [isComplete, setIsComplete] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
   const [reportReady, setReportReady] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [sessionMeta, setSessionMeta] = useState<{
     interviewType: string;
     difficulty: string;
@@ -79,6 +127,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const prevMsgCountRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sessionJustCompletedRef = useRef(false);
 
   // Fetch session on mount
   useEffect(() => {
@@ -108,6 +157,20 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     }
     fetchSession();
   }, [id]);
+
+  // Show confetti when the current session completes and score >= 7.5
+  useEffect(() => {
+    if (!reportReady || !sessionJustCompletedRef.current) return;
+    fetch(`/api/sessions/${id}/report`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.overallScore >= 7.5) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 600);
+        }
+      })
+      .catch(() => {});
+  }, [reportReady, id]);
 
   // Speak new interviewer messages via TTS
   useEffect(() => {
@@ -154,6 +217,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       if (controller.signal.aborted) return;
 
       if (data.isComplete) {
+        sessionJustCompletedRef.current = true;
         // Show closing message from interviewer
         if (data.nextQuestion) {
           setMessages((prev) => [...prev, { role: 'interviewer', content: data.nextQuestion }]);
@@ -282,106 +346,139 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     return <div className={styles.loading}>Loading session...</div>;
   }
 
+  const progressPct = Math.max(0, Math.min(100, (sessionMeta.questionCount / sessionMeta.maxQuestions) * 100));
+
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.headerInfo}>
-          <h2>Mock Interview</h2>
-          <div className={styles.headerMeta}>
-            <span className={styles.tag}>{sessionMeta.interviewType.toUpperCase()}</span>
-            <span className={styles.tag}>{sessionMeta.difficulty}</span>
-            <span className={styles.tag}>{sessionMeta.role}</span>
-            <span>Q {sessionMeta.questionCount}/{sessionMeta.maxQuestions}</span>
-          </div>
-        </div>
-        <div className={styles.headerActions}>
-          {!isComplete && (
-            <button
-              className={`${styles.ttsToggle} ${ttsEnabled ? styles.ttsOn : ''}`}
-              onClick={toggleTTS}
-              title={ttsEnabled ? 'Disable voice' : 'Enable voice'}
-            >
-              {ttsEnabled ? '🔊' : '🔇'}
-            </button>
-          )}
-          {!isComplete && (
-            <button className={styles.endButton} onClick={handleEndEarly} disabled={isEnding}>
-              {isEnding ? 'Ending...' : 'End Interview'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.messages}>
-        {messages.map((msg, i) => (
-          <div key={i} className={`${styles.message} ${styles[msg.role]}`}>
-            {renderContent(msg.content)}
-          </div>
-        ))}
-        {/* Only show thinking indicator while interview is active */}
-        {!isComplete && !isEnding && (isLoading || isTranscribing) && (
-          <div className={`${styles.message} ${styles.thinking}`}>
-            {isTranscribing ? 'Transcribing...' : 'Thinking...'}
-          </div>
-        )}
-        {isSpeaking && (
-          <div className={`${styles.message} ${styles.speaking}`}>
-            Speaking...
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {isComplete ? (
-        <div className={styles.completeBanner}>
-          <p>Interview complete!</p>
-          {reportReady ? (
-            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href={`/report/${id}`} className={styles.reportLink}>
-                View Report
-              </a>
-              <a href="/progress" className={styles.reportLink} style={{ background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)' }}>
-                Progress
-              </a>
-              <a href="/new?reset=1" className={styles.reportLink} style={{ background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)' }}>
-                New Session
-              </a>
+    <>
+      {showConfetti && <ConfettiOverlay />}
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <div className={styles.headerInfo}>
+            <h2>Mock Interview</h2>
+            <div className={styles.headerMeta}>
+              <span className={styles.tag}>{sessionMeta.interviewType.toUpperCase()}</span>
+              <span className={styles.tag}>{sessionMeta.difficulty}</span>
+              <span className={styles.tag}>{sessionMeta.role}</span>
+              <span className={styles.progressText}>Q {sessionMeta.questionCount} / {sessionMeta.maxQuestions}</span>
             </div>
-          ) : (
-            <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-              Generating report...
-            </p>
+          </div>
+          <div className={styles.headerActions}>
+            {!isComplete && (
+              <button
+                className={`${styles.ttsToggle} ${ttsEnabled ? styles.ttsOn : ''}`}
+                onClick={toggleTTS}
+                title={ttsEnabled ? 'Disable voice' : 'Enable voice'}
+              >
+                {ttsEnabled ? '🔊' : '🔇'}
+              </button>
+            )}
+            {!isComplete && (
+              <button className={styles.endButton} onClick={handleEndEarly} disabled={isEnding}>
+                {isEnding ? 'Ending...' : 'End Interview'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className={styles.progressBar}>
+          <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+        </div>
+
+        <div className={styles.messages}>
+          {messages.map((msg, i) =>
+            msg.role === 'interviewer' ? (
+              <div key={i} className={styles.interviewerWrapper}>
+                <div className={styles.avatar}>AI</div>
+                <div className={`${styles.message} ${styles.interviewer}`}>
+                  {renderContent(msg.content)}
+                </div>
+              </div>
+            ) : (
+              <div key={i} className={`${styles.message} ${styles.candidate}`}>
+                {renderContent(msg.content)}
+              </div>
+            )
           )}
+
+          {/* Thinking indicator */}
+          {!isComplete && !isEnding && (isLoading || isTranscribing) && (
+            <div className={styles.interviewerWrapper}>
+              <div className={styles.avatar}>AI</div>
+              <div className={`${styles.message} ${styles.thinking}`}>
+                {isTranscribing ? 'Transcribing...' : 'Thinking...'}
+              </div>
+            </div>
+          )}
+
+          {/* Speaking indicator */}
+          {isSpeaking && (
+            <div className={styles.interviewerWrapper}>
+              <div className={`${styles.avatar} ${styles.avatarActive}`}>AI</div>
+              <div className={`${styles.message} ${styles.interviewer}`}>
+                <div className={styles.speakingDots}>
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
-      ) : (
-        <div className={styles.inputArea}>
-          <button
-            className={`${styles.micButton} ${isRecording ? styles.micRecording : ''}`}
-            onClick={handleVoice}
-            disabled={isLoading || isTranscribing || isEnding || isSpeaking}
-            title={isRecording ? 'Stop recording' : 'Start recording'}
-          >
-            {isRecording ? '⏹' : '🎤'}
-          </button>
-          <textarea
-            ref={textareaRef}
-            className={styles.textArea}
-            placeholder={micError || 'Type your answer... (Cmd+Enter to send)'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading || isRecording || isTranscribing || isEnding || isSpeaking}
-            rows={1}
-          />
-          <button
-            className={styles.sendButton}
-            onClick={() => submitAnswer(input)}
-            disabled={isLoading || isRecording || isTranscribing || isEnding || isSpeaking || !input.trim()}
-          >
-            Send
-          </button>
-        </div>
-      )}
-    </div>
+
+        {isComplete ? (
+          <div className={styles.completeBanner}>
+            <p>Interview complete!</p>
+            {reportReady ? (
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a href={`/report/${id}`} className={styles.reportLink}>
+                  View Report
+                </a>
+                <a href="/progress" className={styles.reportLink} style={{ background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                  Progress
+                </a>
+                <a href="/new?reset=1" className={styles.reportLink} style={{ background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                  New Session
+                </a>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                Generating report...
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className={styles.inputArea}>
+            <button
+              className={`${styles.micButton} ${isRecording ? styles.micRecording : ''}`}
+              onClick={handleVoice}
+              disabled={isLoading || isTranscribing || isEnding || isSpeaking}
+              title={isRecording ? 'Stop recording' : 'Start recording'}
+            >
+              {isRecording ? '⏹' : '🎤'}
+            </button>
+            <textarea
+              ref={textareaRef}
+              className={styles.textArea}
+              placeholder={micError || 'Type your answer... (Cmd+Enter to send)'}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading || isRecording || isTranscribing || isEnding || isSpeaking}
+              rows={1}
+            />
+            <button
+              className={styles.sendButton}
+              onClick={() => submitAnswer(input)}
+              disabled={isLoading || isRecording || isTranscribing || isEnding || isSpeaking || !input.trim()}
+            >
+              Send
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

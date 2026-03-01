@@ -44,6 +44,35 @@
   letter-spacing: 0.04em;
 }
 
+.progressText {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* ---- Progress Bar ---- */
+.progressBar {
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.6s var(--ease);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ---- Header Actions ---- */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .endButton {
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius);
@@ -64,12 +93,6 @@
 .endButton:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .ttsToggle {
@@ -98,17 +121,6 @@
   color: var(--primary);
 }
 
-.speaking {
-  align-self: flex-start;
-  background: var(--bg-card);
-  border: 1px solid var(--primary-muted);
-  color: var(--primary);
-  font-style: italic;
-  font-size: 0.82rem;
-  padding: 0.5rem 0.9rem;
-  animation: subtlePulse 1.5s infinite;
-}
-
 /* ---- Messages ---- */
 .messages {
   flex: 1;
@@ -120,38 +132,95 @@
   scroll-behavior: smooth;
 }
 
+/* Interviewer message with avatar */
+.interviewerWrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: 82%;
+  animation: fadeIn 0.3s var(--ease) both;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-muted);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all var(--transition-base);
+}
+
+.avatarActive {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 0 0 3px var(--primary-muted);
+  animation: subtlePulse 1.5s ease-in-out infinite;
+}
+
+/* Speaking dots indicator */
+.speakingDots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 2px;
+}
+
+.speakingDots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+
+.speakingDots span:nth-child(2) { animation-delay: 0.2s; }
+.speakingDots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* Base message bubble */
 .message {
-  max-width: 78%;
   padding: 0.85rem 1.1rem;
   border-radius: var(--radius-lg);
   line-height: 1.6;
   font-size: 0.92rem;
-  animation: fadeIn 0.3s var(--ease) both;
 }
 
 .interviewer {
-  align-self: flex-start;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-bottom-left-radius: 4px;
   box-shadow: var(--shadow-sm);
+  flex: 1;
+  min-width: 0;
 }
 
 .candidate {
   align-self: flex-end;
+  max-width: 78%;
   background: var(--primary);
   color: white;
   border-bottom-right-radius: 4px;
   box-shadow: var(--shadow-md);
+  animation: fadeIn 0.3s var(--ease) both;
 }
 
 .thinking {
-  align-self: flex-start;
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
   color: var(--text-muted);
   font-style: italic;
   animation: subtlePulse 1.8s infinite;
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---- Code Blocks ---- */
@@ -175,7 +244,7 @@
   color: #E0E0E0;
 }
 
-/* ---- Input Area (Focus Mode) ---- */
+/* ---- Input Area ---- */
 .inputArea {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
@@ -316,6 +385,7 @@
   box-shadow: var(--shadow-md);
 }
 
+/* ---- Loading State ---- */
 .loading {
   display: flex;
   align-items: center;
@@ -323,4 +393,25 @@
   height: calc(100vh - 56px);
   color: var(--text-secondary);
   font-size: 0.95rem;
+}
+
+/* ---- Confetti ---- */
+.confettiOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 130px;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.confettiDot {
+  position: absolute;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  animation: confettiFall 0.5s ease-in both;
 }
