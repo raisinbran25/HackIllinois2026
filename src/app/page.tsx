@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
+import ShaderBackground from '@/components/ui/shader-background';
 
 const FEATURES = [
   {
@@ -100,11 +101,13 @@ export default function LandingPage() {
           HERO — floating logo, full viewport
           ══════════════════════════════════════ */}
       <section className={styles.hero}>
-        {/* Background layers */}
-        <div className={styles.heroBg}  aria-hidden="true" />
-        <div className={styles.orb1}    aria-hidden="true" />
-        <div className={styles.orb2}    aria-hidden="true" />
-        <div className={styles.orb3}    aria-hidden="true" />
+        {/* Background layers — bottom to top */}
+        <ShaderBackground className={styles.shaderCanvas} />
+        <div className={styles.shaderOverlay} aria-hidden="true" />
+        <div className={styles.heroBg}         aria-hidden="true" />
+        <div className={styles.orb1}           aria-hidden="true" />
+        <div className={styles.orb2}           aria-hidden="true" />
+        <div className={styles.orb3}           aria-hidden="true" />
 
         <div className={styles.heroContent}>
           {/* Eyebrow badge */}

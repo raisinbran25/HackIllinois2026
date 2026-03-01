@@ -52,17 +52,55 @@
   overflow: hidden;
 }
 
+/* WebGL shader canvas — masked to an ellipse centered on the logo */
+.shaderCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  /* Ellipse centered at 50% horizontal, 28% vertical — aligned with the logo */
+  mask-image: radial-gradient(
+    ellipse 72% 52% at 50% 28%,
+    black 15%,
+    rgba(0, 0, 0, 0.6) 45%,
+    transparent 75%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 72% 52% at 50% 28%,
+    black 15%,
+    rgba(0, 0, 0, 0.6) 45%,
+    transparent 75%
+  );
+}
+
+/* Overlay — open in the center so the shader shows through behind the logo */
+.shaderOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 65% 48% at 50% 28%,
+    rgba(7, 0, 31, 0.08) 0%,
+    rgba(7, 0, 31, 0.45) 55%,
+    rgba(7, 0, 31, 0.78) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
 /* Animated dot-grid texture */
 .heroBg {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(110, 69, 255, 0.2) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(110, 69, 255, 0.15) 1px, transparent 1px);
   background-size: 36px 36px;
   mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 30%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 30%, transparent 100%);
   pointer-events: none;
   animation: gridShift 20s ease-in-out infinite;
-  opacity: 0.65;
+  opacity: 0.45;
+  z-index: 2;
 }
 
 /* Large purple orb — top center */
@@ -71,12 +109,13 @@
   width: 860px;
   height: 860px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(110, 69, 255, 0.22) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(110, 69, 255, 0.15) 0%, transparent 65%);
   top: -280px;
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
   animation: orbFloat 10s ease-in-out infinite;
+  z-index: 2;
 }
 
 /* Green orb — bottom right */
@@ -85,11 +124,12 @@
   width: 520px;
   height: 520px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(61, 253, 152, 0.11) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(61, 253, 152, 0.08) 0%, transparent 70%);
   bottom: -100px;
   right: -100px;
   pointer-events: none;
   animation: orbFloatAlt 13s ease-in-out infinite;
+  z-index: 2;
 }
 
 /* Small purple orb — bottom left */
@@ -98,11 +138,12 @@
   width: 380px;
   height: 380px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(110, 69, 255, 0.13) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(110, 69, 255, 0.1) 0%, transparent 70%);
   bottom: -60px;
   left: -80px;
   pointer-events: none;
   animation: orbFloat 16s ease-in-out infinite reverse;
+  z-index: 2;
 }
 
 .heroContent {
@@ -110,7 +151,7 @@
   width: 100%;
   text-align: center;
   position: relative;
-  z-index: 1;
+  z-index: 3;
 }
 
 /* ---- Eyebrow badge ---- */
@@ -127,7 +168,7 @@
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.1rem;
   animation: fadeIn 0.9s var(--ease) 0.05s both;
 }
 
@@ -146,7 +187,7 @@
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 2.25rem;
+  margin-bottom: 1.1rem;
   animation: fadeIn 0.9s var(--ease) 0.12s both;
 }
 
@@ -279,6 +320,7 @@
   align-items: center;
   gap: 0.4rem;
   animation: fadeIn 1s var(--ease) 1.2s both;
+  z-index: 3;
 }
 
 .scrollLabel {

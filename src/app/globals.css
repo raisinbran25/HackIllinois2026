@@ -3,73 +3,101 @@
    Deep dark purple · Electric green accent · Bold Syne type
    ============================================================ */
 
+/* Tailwind v4 — must be first */
+@import "tailwindcss";
+
+/* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
 
+/* ---- Tailwind theme — maps design tokens to utility classes ----
+   This makes classes like bg-primary, text-accent, font-display,
+   rounded-xl, shadow-glow, etc. available everywhere.
+   ---------------------------------------------------------------- */
+@theme {
+  /* Colors */
+  --color-primary:       #6e45ff;
+  --color-primary-hover: #5c38e0;
+  --color-accent:        #3dfd98;
+  --color-accent-hover:  #2de086;
+  --color-bg:            #07001f;
+  --color-bg-secondary:  #09002a;
+  --color-bg-elevated:   #100038;
+  --color-success:       #3dfd98;
+  --color-warning:       #f5a623;
+  --color-danger:        #ff4757;
+  --color-white:         #ffffff;
+
+  /* Fonts */
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'Manrope', sans-serif;
+
+  /* Border radius */
+  --radius-sm:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   20px;
+  --radius-full: 9999px;
+}
+
+/* ---- CSS custom properties (for internal use in .module.css) ---- */
 :root {
-  /* ---- Brand Palette ---- */
-  --primary: #6e45ff;
-  --primary-hover: #5c38e0;
-  --primary-muted: rgba(110, 69, 255, 0.12);
-  --accent: #3dfd98;
-  --accent-hover: #2de086;
-  --accent-muted: rgba(61, 253, 152, 0.1);
+  /* Brand */
+  --primary:        #6e45ff;
+  --primary-hover:  #5c38e0;
+  --primary-muted:  rgba(110, 69, 255, 0.12);
+  --accent:         #3dfd98;
+  --accent-hover:   #2de086;
+  --accent-muted:   rgba(61, 253, 152, 0.1);
 
-  /* ---- Surfaces ---- */
-  --bg: #07001f;
-  --bg-secondary: #09002a;
-  --bg-card: rgba(255, 255, 255, 0.04);
+  /* Surfaces */
+  --bg:            #07001f;
+  --bg-secondary:  #09002a;
+  --bg-card:       rgba(255, 255, 255, 0.04);
   --bg-card-hover: rgba(110, 69, 255, 0.08);
-  --bg-elevated: #100038;
+  --bg-elevated:   #100038;
 
-  /* ---- Borders ---- */
-  --border: rgba(110, 69, 255, 0.18);
+  /* Borders */
+  --border:       rgba(110, 69, 255, 0.18);
   --border-light: rgba(110, 69, 255, 0.38);
   --border-focus: var(--primary);
 
-  /* ---- Text ---- */
-  --text: #ffffff;
+  /* Text */
+  --text:           #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.55);
-  --text-muted: rgba(255, 255, 255, 0.28);
+  --text-muted:     rgba(255, 255, 255, 0.28);
 
-  /* ---- Semantic ---- */
-  --success: #3dfd98;
+  /* Semantic */
+  --success:       #3dfd98;
   --success-muted: rgba(61, 253, 152, 0.12);
-  --warning: #f5a623;
+  --warning:       #f5a623;
   --warning-muted: rgba(245, 166, 35, 0.12);
-  --danger: #ff4757;
-  --danger-muted: rgba(255, 71, 87, 0.12);
+  --danger:        #ff4757;
+  --danger-muted:  rgba(255, 71, 87, 0.12);
 
-  /* ---- Fonts ---- */
+  /* Fonts */
   --font-display: 'Syne', sans-serif;
-  --font-body: 'Manrope', sans-serif;
+  --font-body:    'Manrope', sans-serif;
 
-  /* ---- Radii ---- */
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 20px;
+  /* Radii */
+  --radius:      8px;
+  --radius-lg:   12px;
+  --radius-xl:   20px;
   --radius-full: 9999px;
 
-  /* ---- Shadows ---- */
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
-  --shadow-glow: 0 0 28px rgba(110, 69, 255, 0.35);
+  /* Shadows */
+  --shadow-sm:         0 1px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md:         0 4px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg:         0 12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-glow:       0 0 28px rgba(110, 69, 255, 0.35);
   --shadow-glow-green: 0 0 24px rgba(61, 253, 152, 0.28);
 
-  /* ---- Transitions ---- */
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transitions */
+  --ease:            cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 150ms var(--ease);
   --transition-base: 250ms var(--ease);
   --transition-slow: 400ms var(--ease);
 }
 
-/* ---- Reset ---- */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
+/* ---- Base overrides (after Tailwind preflight) ---- */
 html,
 body {
   max-width: 100vw;
@@ -129,7 +157,7 @@ textarea {
 }
 
 @keyframes confettiFall {
-  0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+  0%   { transform: translateY(0) rotate(0deg);      opacity: 1; }
   100% { transform: translateY(100px) rotate(360deg); opacity: 0; }
 }
 
