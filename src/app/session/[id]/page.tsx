@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useRef, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRecorder } from '@/hooks/useRecorder';
 import styles from './page.module.css';
@@ -9,6 +9,51 @@ interface MessageItem {
   content: string;
 }
 
+/** Detect whether a message contains a fenced code block or looks like code */
+function containsCode(text: string): boolean {
+  if (/```/.test(text)) return true;
+  // Heuristic: multiple lines with leading whitespace that look like code
+  const lines = text.split('\n');
+  if (lines.length >= 3) {
+    const indented = lines.filter((l) => /^[ \t]{2,}/.test(l));
+    if (indented.length >= 2) return true;
+  }
+  return false;
+}
+
+/** Render message content, formatting code blocks with syntax highlighting */
+function renderContent(text: string) {
+  // Split on fenced code blocks (```...```)
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  if (parts.length === 1 && !text.startsWith('```')) {
+    // No fenced blocks — check if the whole thing looks like code
+    if (containsCode(text)) {
+      return <pre className={styles.codeBlock}><code>{text}</code></pre>;
+    }
+    return <span style={{ whiteSpace: 'pre-wrap' }}>{text}</span>;
+  }
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('```') && part.endsWith('```')) {
+          // Extract language hint and code body
+          const inner = part.slice(3, -3);
+          const newlineIdx = inner.indexOf('\n');
+          const code = newlineIdx >= 0 ? inner.slice(newlineIdx + 1) : inner;
+          return (
+            <pre key={i} className={styles.codeBlock}>
+              <code>{code}</code>
+            </pre>
+          );
+        }
+        if (!part.trim()) return null;
+        return <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -16,6 +61,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
   const [sessionMeta, setSessionMeta] = useState<{
     interviewType: string;
     difficulty: string;
@@ -27,6 +73,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [isTranscribing, setIsTranscribing] = useState(false);
   const { isRecording, startRecording, stopRecording, error: micError } = useRecorder();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Fetch session on mount
   useEffect(() => {
@@ -56,24 +104,42 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const submitAnswer = async (text: string) => {
-    if (!text.trim() || isLoading || isComplete) return;
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    }
+  }, [input]);
+
+  const submitAnswer = useCallback(async (text: string) => {
+    if (!text.trim() || isLoading || isComplete || isEnding) return;
     setIsLoading(true);
-    setMessages((prev) => [...prev, { role: 'candidate', content: text.trim() }]);
+    setMessages((prev) => [...prev, { role: 'candidate', content: text }]);
     setInput('');
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const res = await fetch(`/api/sessions/${id}/answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim() }),
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
       });
       const data = await res.json();
 
+      if (controller.signal.aborted) return;
+
       if (data.isComplete) {
+        // Show closing message from interviewer
+        if (data.nextQuestion) {
+          setMessages((prev) => [...prev, { role: 'interviewer', content: data.nextQuestion }]);
+        }
         setIsComplete(true);
-        // Auto-end session to generate report
-        await fetch(`/api/sessions/${id}/end`, { method: 'POST' });
+        // Trigger report generation (no loading indicator shown after complete)
+        fetch(`/api/sessions/${id}/end`, { method: 'POST' }).catch(() => {});
       } else if (data.nextQuestion) {
         setMessages((prev) => [...prev, { role: 'interviewer', content: data.nextQuestion }]);
       }
@@ -81,23 +147,28 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       if (sessionMeta) {
         setSessionMeta({ ...sessionMeta, questionCount: data.questionNumber || sessionMeta.questionCount });
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setMessages((prev) => [
         ...prev,
         { role: 'interviewer', content: 'Sorry, something went wrong. Could you repeat that?' },
       ]);
     }
+    abortRef.current = null;
     setIsLoading(false);
-  };
+  }, [id, isLoading, isComplete, isEnding, sessionMeta]);
 
   const handleVoice = async () => {
     if (isRecording) {
-      // Stop recording and transcribe
       setIsTranscribing(true);
       try {
         const blob = await stopRecording();
         const formData = new FormData();
         formData.append('audio', blob, 'recording.webm');
+        // Pass session context for Supermemory multimodal extractor upload
+        const userName = typeof window !== 'undefined' ? localStorage.getItem('userName') : null;
+        if (userName) formData.append('userName', userName);
+        formData.append('sessionId', id);
 
         const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
         const { text } = await res.json();
@@ -113,14 +184,44 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   };
 
   const handleEndEarly = async () => {
-    setIsLoading(true);
-    try {
-      await fetch(`/api/sessions/${id}/end`, { method: 'POST' });
-      setIsComplete(true);
-    } catch {
-      // ignore
+    // Immediately abort any in-flight AI request
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
+
+    setIsEnding(true);
     setIsLoading(false);
+
+    try {
+      const res = await fetch(`/api/sessions/${id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ earlyExit: true }),
+      });
+      const data = await res.json();
+      setIsComplete(true);
+      // Redirect to report if available, otherwise dashboard
+      if (data.report) {
+        router.push(`/report/${id}`);
+      } else {
+        router.push('/new');
+      }
+    } catch {
+      // On failure, redirect to dashboard
+      router.push('/new');
+    }
+    setIsEnding(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Cmd/Ctrl + Enter → submit
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitAnswer(input);
+      return;
+    }
+    // Plain Enter → newline (default textarea behavior, no preventDefault needed)
   };
 
   if (initError) {
@@ -153,8 +254,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
         {!isComplete && (
-          <button className={styles.endButton} onClick={handleEndEarly} disabled={isLoading}>
-            End Interview
+          <button className={styles.endButton} onClick={handleEndEarly} disabled={isEnding}>
+            {isEnding ? 'Ending...' : 'End Interview'}
           </button>
         )}
       </div>
@@ -162,10 +263,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       <div className={styles.messages}>
         {messages.map((msg, i) => (
           <div key={i} className={`${styles.message} ${styles[msg.role]}`}>
-            {msg.content}
+            {renderContent(msg.content)}
           </div>
         ))}
-        {(isLoading || isTranscribing) && (
+        {/* Only show thinking indicator while interview is active — Task 4: post-interview output guard */}
+        {!isComplete && !isEnding && (isLoading || isTranscribing) && (
           <div className={`${styles.message} ${styles.thinking}`}>
             {isTranscribing ? 'Transcribing...' : 'Thinking...'}
           </div>
@@ -185,24 +287,25 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           <button
             className={`${styles.micButton} ${isRecording ? styles.micRecording : ''}`}
             onClick={handleVoice}
-            disabled={isLoading || isTranscribing}
+            disabled={isLoading || isTranscribing || isEnding}
             title={isRecording ? 'Stop recording' : 'Start recording'}
           >
             {isRecording ? '⏹' : '🎤'}
           </button>
-          <input
-            className={styles.textInput}
-            type="text"
-            placeholder={micError || 'Type your answer...'}
+          <textarea
+            ref={textareaRef}
+            className={styles.textArea}
+            placeholder={micError || 'Type your answer... (Cmd+Enter to send)'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submitAnswer(input)}
-            disabled={isLoading || isRecording || isTranscribing}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading || isRecording || isTranscribing || isEnding}
+            rows={1}
           />
           <button
             className={styles.sendButton}
             onClick={() => submitAnswer(input)}
-            disabled={isLoading || isRecording || isTranscribing || !input.trim()}
+            disabled={isLoading || isRecording || isTranscribing || isEnding || !input.trim()}
           >
             Send
           </button>

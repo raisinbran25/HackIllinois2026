@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { classifyInterview } from '@/lib/classifier';
 import { generateQuestion } from '@/lib/interviewer';
-import { getWeaknessProfile, buildFocusPlan } from '@/lib/adaptation';
+import { getWeaknessProfile, buildFocusPlan, getPastInterviewInsights } from '@/lib/adaptation';
 import { store } from '@/lib/store';
 import { Session } from '@/lib/types';
 import { INTERVIEW_PHASES, MAX_QUESTIONS } from '@/lib/constants';
@@ -18,8 +18,11 @@ export async function POST(req: NextRequest) {
     // 1. Classify interview type
     const classification = await classifyInterview(role, company, jobDescription);
 
-    // 2. Retrieve weakness profile and build focus plan
-    const profile = await getWeaknessProfile(userName);
+    // 2. Retrieve weakness profile, build focus plan, and fetch past insights
+    const [profile, pastInsights] = await Promise.all([
+      getWeaknessProfile(userName),
+      getPastInterviewInsights(userName),
+    ]);
     const focusPlan = buildFocusPlan(profile);
 
     // Override difficulty if adaptation has data
@@ -37,6 +40,7 @@ export async function POST(req: NextRequest) {
         interviewType: classification.interviewType,
         difficulty,
         focusPlan: focusPlan.weaknesses.length > 0 ? focusPlan : undefined,
+        pastInsights: pastInsights.length > 0 ? pastInsights : undefined,
       },
       messages: [],
       questionCount: 0,

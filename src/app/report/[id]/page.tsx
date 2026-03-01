@@ -16,6 +16,17 @@ const SKILL_LABELS: Record<string, string> = {
   quantification: 'Quantification',
 };
 
+interface Drill {
+  title: string;
+  problemStatement: string;
+  functionSignature?: string;
+  exampleInput?: string;
+  exampleOutput?: string;
+  starterCode?: string;
+  hints?: string[];
+  targetSkill?: string;
+}
+
 interface Report {
   sessionId: string;
   userName: string;
@@ -25,7 +36,7 @@ interface Report {
   skillScores: { skill: string; score: number; evidence: string }[];
   strengths: string[];
   weaknesses: string[];
-  drills: string[];
+  drills: (string | Drill)[];
   summary: string;
 }
 
@@ -39,6 +50,56 @@ function barColor(score: number): string {
   if (score >= 7) return 'var(--success)';
   if (score >= 5) return 'var(--warning)';
   return 'var(--danger)';
+}
+
+function isDrill(d: string | Drill): d is Drill {
+  return typeof d === 'object' && d !== null && 'title' in d;
+}
+
+function DrillCard({ drill }: { drill: Drill }) {
+  return (
+    <div className={styles.drillCard}>
+      <h3 className={styles.drillTitle}>{drill.title}</h3>
+      {drill.targetSkill && (
+        <span className={styles.drillSkillTag}>
+          {SKILL_LABELS[drill.targetSkill] || drill.targetSkill}
+        </span>
+      )}
+      <p className={styles.drillProblem}>{drill.problemStatement}</p>
+
+      {drill.functionSignature && (
+        <div className={styles.drillSection}>
+          <span className={styles.drillLabel}>Signature</span>
+          <pre className={styles.codeBlock}><code>{drill.functionSignature}</code></pre>
+        </div>
+      )}
+
+      {(drill.exampleInput || drill.exampleOutput) && (
+        <div className={styles.drillSection}>
+          <span className={styles.drillLabel}>Example</span>
+          <pre className={styles.codeBlock}>
+            <code>{drill.exampleInput && `Input:  ${drill.exampleInput}`}{drill.exampleInput && drill.exampleOutput && '\n'}{drill.exampleOutput && `Output: ${drill.exampleOutput}`}</code>
+          </pre>
+        </div>
+      )}
+
+      {drill.starterCode && (
+        <div className={styles.drillSection}>
+          <span className={styles.drillLabel}>Starter Code</span>
+          <pre className={styles.codeBlock}><code>{drill.starterCode}</code></pre>
+        </div>
+      )}
+
+      {drill.hints && drill.hints.length > 0 && (
+        <div className={styles.drillSection}>
+          <span className={styles.drillLabel}>Hints</span>
+          <ul className={styles.hintList}>
+            {drill.hints.map((h, i) => <li key={i}>{h}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -133,9 +194,17 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       {report.drills.length > 0 && (
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Practice Drills</h2>
-          <ul className={styles.list}>
-            {report.drills.map((d, i) => <li key={i}>{d}</li>)}
-          </ul>
+          <div className={styles.drillsGrid}>
+            {report.drills.map((d, i) =>
+              isDrill(d) ? (
+                <DrillCard key={i} drill={d} />
+              ) : (
+                <div key={i} className={styles.drillCard}>
+                  <p className={styles.drillProblem}>{d}</p>
+                </div>
+              )
+            )}
+          </div>
         </div>
       )}
 

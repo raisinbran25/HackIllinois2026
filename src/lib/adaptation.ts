@@ -142,6 +142,67 @@ export function buildFocusPlan(profile: WeaknessProfile | null): FocusPlan {
   return { weaknesses, strengths, neutral, difficulty };
 }
 
+/**
+ * Retrieve past interview insights from Supermemory.
+ * Searches stored session reports to identify areas where the candidate
+ * struggled in previous interviews. This data is used augmentatively
+ * to ask more targeted follow-up questions in future interviews.
+ */
+export async function getPastInterviewInsights(userName: string): Promise<string[]> {
+  try {
+    const client = getSupermemory();
+    const results = await client.search.execute({
+      q: 'interview weaknesses struggles areas for improvement',
+      containerTags: [`user_${userName}`],
+      filters: {
+        AND: [{ key: 'type', value: 'session_report' }],
+      },
+    });
+
+    const insights: string[] = [];
+    if (results.results) {
+      for (const result of results.results.slice(0, 5)) {
+        try {
+          const report = JSON.parse(result.content ?? '');
+          if (report.weaknesses && Array.isArray(report.weaknesses)) {
+            insights.push(...report.weaknesses);
+          }
+        } catch {
+          // Skip unparseable results
+        }
+      }
+    }
+    return insights;
+  } catch (err) {
+    console.error('Failed to retrieve past interview insights:', err);
+    return [];
+  }
+}
+
+/**
+ * Upload audio recording to Supermemory via the multimodal extractor.
+ * Supermemory will automatically transcribe and extract insights from the
+ * audio, making them available for future semantic search.
+ * No raw transcript is stored — only the extracted structured insights.
+ */
+export async function uploadInterviewAudio(
+  userName: string,
+  audioBlob: Blob,
+  sessionId: string
+): Promise<void> {
+  try {
+    const client = getSupermemory();
+    const file = new File([audioBlob], `interview_${sessionId}.webm`, { type: audioBlob.type });
+    await client.documents.uploadFile({
+      file,
+      containerTags: `user_${userName}`,
+      mimeType: audioBlob.type || 'audio/webm',
+    });
+  } catch (err) {
+    console.error('Failed to upload interview audio to Supermemory:', err);
+  }
+}
+
 export function updateWeaknessProfile(
   existing: WeaknessProfile | null,
   userName: string,

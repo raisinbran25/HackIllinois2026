@@ -46,6 +46,12 @@ Difficulty level: ${focusPlan.difficulty}. ${
       }`
     : '';
 
+  const pastInsightsBlock = config.pastInsights && config.pastInsights.length > 0
+    ? `\nPAST INTERVIEW INSIGHTS (areas the candidate previously struggled with):
+${config.pastInsights.map((i) => `- ${i}`).join('\n')}
+Use these insights to ask more targeted follow-up questions when relevant to the current phase. Do not mention these insights directly to the candidate.`
+    : '';
+
   return `You are a professional ${config.interviewType} interviewer conducting a mock interview.
 
 Role being interviewed for: ${config.role}
@@ -53,7 +59,7 @@ ${config.company ? `Company: ${config.company}` : ''}
 Interview type: ${config.interviewType}
 Current phase: ${phase}
 Difficulty: ${config.difficulty}
-${focusInstructions}
+${focusInstructions}${pastInsightsBlock}
 
 Conversation so far:
 ${conversationHistory || '(none yet)'}
@@ -146,9 +152,16 @@ Generate a report in JSON:
   "strengths": ["strength1", "strength2", "strength3"],
   "weaknesses": ["weakness1", "weakness2", "weakness3"],
   "drills": [
-    "Specific practice exercise 1",
-    "Specific practice exercise 2",
-    "Specific practice exercise 3"
+    {
+      "title": "Descriptive drill title",
+      "problemStatement": "Clear description of the problem to solve",
+      "functionSignature": "function name(param: Type): ReturnType",
+      "exampleInput": "example input value",
+      "exampleOutput": "expected output value",
+      "starterCode": "function name(param) {\n  // Your code here\n  \n}",
+      "hints": ["hint 1", "hint 2"],
+      "targetSkill": "skill_name"
+    }
   ],
   "summary": "2-3 sentence overall assessment"
 }
@@ -156,5 +169,8 @@ Generate a report in JSON:
 Rules for drills:
 - Make drills specific and actionable
 - Target identified weaknesses
-- Include at least one behavioral drill if behavioral skills were weak`;
+- Each coding drill MUST include: title, clear problemStatement, functionSignature, exampleInput, exampleOutput, and starterCode with meaningful variable names and inline comments
+- For behavioral drills, include title, problemStatement (a scenario prompt), targetSkill, and hints. Omit functionSignature/starterCode/exampleInput/exampleOutput
+- Include at least one behavioral drill if behavioral skills were weak
+- Include at least 3 drills total`;
 }

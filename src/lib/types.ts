@@ -50,6 +50,7 @@ export interface SessionConfig {
   interviewType: InterviewType;
   difficulty: Difficulty;
   focusPlan?: FocusPlan;
+  pastInsights?: string[];
 }
 
 export interface Session {
@@ -65,6 +66,17 @@ export interface Session {
   createdAt: number;
 }
 
+export interface DrillItem {
+  title: string;
+  problemStatement: string;
+  functionSignature?: string;
+  exampleInput?: string;
+  exampleOutput?: string;
+  starterCode?: string;
+  hints?: string[];
+  targetSkill?: string;
+}
+
 export interface SessionReport {
   sessionId: string;
   userName: string;
@@ -74,7 +86,7 @@ export interface SessionReport {
   skillScores: SkillScore[];
   strengths: string[];
   weaknesses: string[];
-  drills: string[];
+  drills: (string | DrillItem)[];
   summary: string;
   createdAt: number;
 }
