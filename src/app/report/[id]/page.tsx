@@ -2,33 +2,39 @@
 import { useState, useEffect, useRef, use } from 'react';
 import styles from './page.module.css';
 
-// Fixed confetti particle positions spread across the full screen width
+// Particles spread across the full screen width with varied size and fall duration
+// for a natural, staggered look. dur is in ms (1200–1800 range).
 const CONFETTI_PARTICLES = [
-  { x: '2%',  delay: 0,   color: '#4A6CF7' },
-  { x: '6%',  delay: 40,  color: '#C9A227' },
-  { x: '10%', delay: 15,  color: '#2EA043' },
-  { x: '14%', delay: 60,  color: '#4A6CF7' },
-  { x: '18%', delay: 25,  color: '#C9A227' },
-  { x: '22%', delay: 75,  color: '#2EA043' },
-  { x: '26%', delay: 10,  color: '#4A6CF7' },
-  { x: '30%', delay: 50,  color: '#C9A227' },
-  { x: '34%', delay: 35,  color: '#2EA043' },
-  { x: '38%', delay: 70,  color: '#4A6CF7' },
-  { x: '42%', delay: 5,   color: '#C9A227' },
-  { x: '46%', delay: 45,  color: '#2EA043' },
-  { x: '50%', delay: 20,  color: '#4A6CF7' },
-  { x: '54%', delay: 65,  color: '#C9A227' },
-  { x: '58%', delay: 30,  color: '#2EA043' },
-  { x: '62%', delay: 80,  color: '#4A6CF7' },
-  { x: '66%', delay: 12,  color: '#C9A227' },
-  { x: '70%', delay: 55,  color: '#2EA043' },
-  { x: '74%', delay: 38,  color: '#4A6CF7' },
-  { x: '78%', delay: 68,  color: '#C9A227' },
-  { x: '82%', delay: 22,  color: '#2EA043' },
-  { x: '86%', delay: 48,  color: '#4A6CF7' },
-  { x: '90%', delay: 8,   color: '#C9A227' },
-  { x: '94%', delay: 72,  color: '#2EA043' },
-  { x: '98%', delay: 32,  color: '#4A6CF7' },
+  { x: '2%',  delay: 0,   color: '#4A6CF7', size: 5, dur: 1400 },
+  { x: '5%',  delay: 100, color: '#C9A227', size: 4, dur: 1650 },
+  { x: '8%',  delay: 30,  color: '#2EA043', size: 6, dur: 1300 },
+  { x: '11%', delay: 160, color: '#4A6CF7', size: 4, dur: 1550 },
+  { x: '14%', delay: 55,  color: '#C9A227', size: 5, dur: 1750 },
+  { x: '17%', delay: 210, color: '#2EA043', size: 4, dur: 1350 },
+  { x: '20%', delay: 20,  color: '#4A6CF7', size: 6, dur: 1480 },
+  { x: '23%', delay: 130, color: '#C9A227', size: 5, dur: 1620 },
+  { x: '26%', delay: 75,  color: '#2EA043', size: 4, dur: 1530 },
+  { x: '30%', delay: 180, color: '#4A6CF7', size: 5, dur: 1420 },
+  { x: '33%', delay: 10,  color: '#C9A227', size: 6, dur: 1680 },
+  { x: '36%', delay: 95,  color: '#2EA043', size: 4, dur: 1320 },
+  { x: '40%', delay: 145, color: '#4A6CF7', size: 5, dur: 1500 },
+  { x: '43%', delay: 50,  color: '#C9A227', size: 4, dur: 1780 },
+  { x: '46%', delay: 195, color: '#2EA043', size: 6, dur: 1370 },
+  { x: '50%', delay: 35,  color: '#4A6CF7', size: 5, dur: 1460 },
+  { x: '53%', delay: 165, color: '#C9A227', size: 4, dur: 1600 },
+  { x: '56%', delay: 70,  color: '#2EA043', size: 6, dur: 1280 },
+  { x: '60%', delay: 115, color: '#4A6CF7', size: 4, dur: 1560 },
+  { x: '63%', delay: 25,  color: '#C9A227', size: 5, dur: 1720 },
+  { x: '66%', delay: 190, color: '#2EA043', size: 4, dur: 1390 },
+  { x: '70%', delay: 60,  color: '#4A6CF7', size: 6, dur: 1470 },
+  { x: '73%', delay: 135, color: '#C9A227', size: 5, dur: 1640 },
+  { x: '76%', delay: 45,  color: '#2EA043', size: 4, dur: 1340 },
+  { x: '80%', delay: 175, color: '#4A6CF7', size: 5, dur: 1510 },
+  { x: '83%', delay: 15,  color: '#C9A227', size: 6, dur: 1760 },
+  { x: '86%', delay: 90,  color: '#2EA043', size: 4, dur: 1430 },
+  { x: '90%', delay: 150, color: '#4A6CF7', size: 5, dur: 1580 },
+  { x: '93%', delay: 65,  color: '#C9A227', size: 4, dur: 1690 },
+  { x: '96%', delay: 200, color: '#2EA043', size: 6, dur: 1310 },
 ];
 
 function ConfettiOverlay() {
@@ -38,7 +44,14 @@ function ConfettiOverlay() {
         <div
           key={i}
           className={styles.confettiDot}
-          style={{ left: p.x, background: p.color, animationDelay: `${p.delay}ms` }}
+          style={{
+            left: p.x,
+            background: p.color,
+            width: p.size,
+            height: p.size,
+            animationDuration: `${p.dur}ms`,
+            animationDelay: `${p.delay}ms`,
+          }}
         />
       ))}
     </div>
@@ -194,7 +207,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     confettiShownRef.current = true;
     if (report.overallScore >= 7.5) {
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 600);
+      setTimeout(() => setShowConfetti(false), 2100);
     }
   }, [report]);
 
