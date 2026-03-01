@@ -27,7 +27,8 @@ export async function generateQuestion(session: Session): Promise<string> {
           session.phases[session.phaseIndex],
           conversationHistory,
           session.config.focusPlan,
-          lastCandidateMsg?.content
+          lastCandidateMsg?.content,
+          session.technicalQuestionAsked
         ),
       },
     ],
@@ -42,7 +43,7 @@ export async function evaluateAnswer(
   session: Session,
   question: string,
   answer: string
-): Promise<{ scores: SkillScore[]; shouldFollowUp: boolean }> {
+): Promise<{ scores: SkillScore[]; shouldFollowUp: boolean; nearPerfect: boolean }> {
   const openai = getOpenAI();
   const relevantSkills = SKILLS_BY_TYPE[session.config.interviewType];
   const phase = session.phases[session.phaseIndex];
@@ -78,5 +79,6 @@ export async function evaluateAnswer(
   return {
     scores,
     shouldFollowUp: parsed.shouldFollowUp ?? false,
+    nearPerfect: parsed.nearPerfect ?? false,
   };
 }

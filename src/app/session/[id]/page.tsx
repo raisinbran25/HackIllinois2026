@@ -62,6 +62,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
+  const [reportReady, setReportReady] = useState(false);
   const [sessionMeta, setSessionMeta] = useState<{
     interviewType: string;
     difficulty: string;
@@ -91,7 +92,13 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           questionCount: data.questionCount,
           maxQuestions: data.maxQuestions,
         });
-        if (data.status === 'completed') setIsComplete(true);
+        if (data.status === 'completed') {
+          setIsComplete(true);
+          // Check if report is already generated
+          fetch(`/api/sessions/${id}/report`)
+            .then((r) => { if (r.ok) setReportReady(true); })
+            .catch(() => {});
+        }
       } catch {
         setInitError('Session not found. It may have expired.');
       }
@@ -138,8 +145,10 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           setMessages((prev) => [...prev, { role: 'interviewer', content: data.nextQuestion }]);
         }
         setIsComplete(true);
-        // Trigger report generation (no loading indicator shown after complete)
-        fetch(`/api/sessions/${id}/end`, { method: 'POST' }).catch(() => {});
+        // Trigger report generation — mark reportReady when done
+        fetch(`/api/sessions/${id}/end`, { method: 'POST' })
+          .then((r) => { if (r.ok) setReportReady(true); })
+          .catch(() => {});
       } else if (data.nextQuestion) {
         setMessages((prev) => [...prev, { role: 'interviewer', content: data.nextQuestion }]);
       }
@@ -174,7 +183,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         const { text } = await res.json();
         setIsTranscribing(false);
 
-        if (text) await submitAnswer(text);
+        // Append transcribed voice text to existing input — do NOT auto-submit.
+        // The user must explicitly press Send to submit all input together.
+        if (text) {
+          setInput((prev) => (prev ? prev + '\n' + text : text));
+        }
       } catch {
         setIsTranscribing(false);
       }
@@ -219,6 +232,20 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       submitAnswer(input);
+      return;
+    }
+    // Tab → insert 2-space indentation instead of changing focus
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const newValue = input.substring(0, start) + '  ' + input.substring(end);
+      setInput(newValue);
+      // Restore cursor position after state update
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + 2;
+      });
       return;
     }
     // Plain Enter → newline (default textarea behavior, no preventDefault needed)
@@ -278,9 +305,15 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       {isComplete ? (
         <div className={styles.completeBanner}>
           <p>Interview complete!</p>
-          <a href={`/report/${id}`} className={styles.reportLink}>
-            View Report
-          </a>
+          {reportReady ? (
+            <a href={`/report/${id}`} className={styles.reportLink}>
+              View Report
+            </a>
+          ) : (
+            <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+              Generating report...
+            </p>
+          )}
         </div>
       ) : (
         <div className={styles.inputArea}>

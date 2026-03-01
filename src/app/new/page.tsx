@@ -1,14 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
 
-export default function NewSessionPage() {
+function NewSessionForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isReset = searchParams.get('reset') === '1';
   const [userName, setUserName] = useState('');
   const [role, setRole] = useState('');
   const [company, setCompany] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,12 +22,36 @@ export default function NewSessionPage() {
       return;
     }
     setUserName(stored);
-  }, [router]);
+
+    // If reset, clear stored job context
+    if (isReset) {
+      localStorage.removeItem('jobRole');
+      localStorage.removeItem('jobCompany');
+      localStorage.removeItem('jobDescription');
+      return;
+    }
+
+    // Load locked job context if it exists
+    const savedRole = localStorage.getItem('jobRole');
+    const savedCompany = localStorage.getItem('jobCompany');
+    const savedJD = localStorage.getItem('jobDescription');
+    if (savedRole && savedJD) {
+      setRole(savedRole);
+      setCompany(savedCompany || '');
+      setJobDescription(savedJD);
+      setLocked(true);
+    }
+  }, [router, isReset]);
 
   const handleSubmit = async () => {
     if (!role.trim() || !jobDescription.trim()) return;
     setLoading(true);
     setError('');
+
+    // Lock job context in localStorage for future interviews
+    localStorage.setItem('jobRole', role.trim());
+    localStorage.setItem('jobCompany', company.trim());
+    localStorage.setItem('jobDescription', jobDescription.trim());
 
     try {
       const res = await fetch('/api/sessions', {
@@ -53,8 +80,8 @@ export default function NewSessionPage() {
 
   return (
     <main className={styles.container}>
-      <h1 className={styles.title}>New Interview Session</h1>
-      <p className={styles.subtitle}>Welcome, {userName}. Fill in the details below.</p>
+      <h1 className={styles.title}>{locked ? 'Next Interview' : 'New Interview Session'}</h1>
+      <p className={styles.subtitle}>Welcome, {userName}. {locked ? 'Your job context is locked from before.' : 'Fill in the details below.'}</p>
 
       <div className={styles.form}>
         <div className={styles.field}>
@@ -64,6 +91,7 @@ export default function NewSessionPage() {
             placeholder="e.g., Software Engineer"
             value={role}
             onChange={(e) => setRole(e.target.value)}
+            disabled={locked}
           />
         </div>
 
@@ -74,6 +102,7 @@ export default function NewSessionPage() {
             placeholder="e.g., Google"
             value={company}
             onChange={(e) => setCompany(e.target.value)}
+            disabled={locked}
           />
         </div>
 
@@ -83,6 +112,7 @@ export default function NewSessionPage() {
             placeholder="Paste the job description here..."
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
+            disabled={locked}
           />
         </div>
 
@@ -97,5 +127,13 @@ export default function NewSessionPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function NewSessionPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading...</div>}>
+      <NewSessionForm />
+    </Suspense>
   );
 }

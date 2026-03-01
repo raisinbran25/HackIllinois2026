@@ -61,12 +61,18 @@ export async function POST(
     store.setReport(session.id, report);
     store.setSession(session.id, session);
 
+    // Extract interviewer questions for the repetition guard
+    const interviewerQuestions = session.messages
+      .filter((m) => m.role === 'interviewer')
+      .map((m) => m.content);
+
     // Store in Supermemory (non-blocking, wrapped in try-catch)
     // CRITICAL: If user exited early, do NOT update the weakness profile
     // to prevent partial data from affecting long-term scoring and adaptive question selection
     try {
-      // Always store the session report for reference
-      await storeSessionReport(session.config.userName, JSON.stringify(report));
+      // Always store the session report for reference, including questions for repetition guard
+      const reportWithQuestions = { ...report, questions: interviewerQuestions };
+      await storeSessionReport(session.config.userName, JSON.stringify(reportWithQuestions));
 
       if (!earlyExit) {
         // Only update weakness profile on natural (complete) interview endings

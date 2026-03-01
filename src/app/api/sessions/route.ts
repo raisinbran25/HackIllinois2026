@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { classifyInterview } from '@/lib/classifier';
 import { generateQuestion } from '@/lib/interviewer';
-import { getWeaknessProfile, buildFocusPlan, getPastInterviewInsights } from '@/lib/adaptation';
+import { getWeaknessProfile, buildFocusPlan, getPastInterviewInsights, getPastQuestions } from '@/lib/adaptation';
 import { store } from '@/lib/store';
 import { Session } from '@/lib/types';
-import { INTERVIEW_PHASES, MAX_QUESTIONS } from '@/lib/constants';
+import { INTERVIEW_PHASES, MAX_QUESTIONS, TECHNICAL_PHASES } from '@/lib/constants';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,10 +18,11 @@ export async function POST(req: NextRequest) {
     // 1. Classify interview type
     const classification = await classifyInterview(role, company, jobDescription);
 
-    // 2. Retrieve weakness profile, build focus plan, and fetch past insights
-    const [profile, pastInsights] = await Promise.all([
+    // 2. Retrieve weakness profile, build focus plan, fetch past insights + past questions
+    const [profile, pastInsights, pastQuestions] = await Promise.all([
       getWeaknessProfile(userName),
       getPastInterviewInsights(userName),
+      getPastQuestions(userName),
     ]);
     const focusPlan = buildFocusPlan(profile);
 
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
         difficulty,
         focusPlan: focusPlan.weaknesses.length > 0 ? focusPlan : undefined,
         pastInsights: pastInsights.length > 0 ? pastInsights : undefined,
+        pastQuestions: pastQuestions.length > 0 ? pastQuestions : undefined,
       },
       messages: [],
       questionCount: 0,
@@ -50,6 +52,8 @@ export async function POST(req: NextRequest) {
       phaseIndex: 0,
       status: 'active',
       createdAt: Date.now(),
+      technicalQuestionAsked: false,
+      candidateMessageCount: 0,
     };
 
     // 4. Generate first question
@@ -60,6 +64,10 @@ export async function POST(req: NextRequest) {
       timestamp: Date.now(),
     });
     session.questionCount = 1;
+    // Mark technical question as asked if the first phase is technical
+    if (TECHNICAL_PHASES.has(phases[0])) {
+      session.technicalQuestionAsked = true;
+    }
 
     // 5. Store
     store.setSession(session.id, session);

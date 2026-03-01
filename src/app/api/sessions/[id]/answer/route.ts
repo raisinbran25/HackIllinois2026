@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/lib/store';
 import { evaluateAnswer, generateQuestion } from '@/lib/interviewer';
+import { TECHNICAL_PHASES } from '@/lib/constants';
 
 export async function POST(
   req: NextRequest,
@@ -15,12 +16,13 @@ export async function POST(
     const { text } = await req.json();
     if (!text) return NextResponse.json({ error: 'No answer text' }, { status: 400 });
 
-    // 1. Record candidate message
+    // 1. Record candidate message and increment message count
     session.messages.push({
       role: 'candidate',
       content: text,
       timestamp: Date.now(),
     });
+    session.candidateMessageCount = (session.candidateMessageCount || 0) + 1;
 
     // 2. Get last interviewer question
     const lastQuestion = [...session.messages]
@@ -28,14 +30,17 @@ export async function POST(
       .find((m) => m.role === 'interviewer')?.content || '';
 
     // 3. Evaluate silently (scores are never shown during the interview)
-    const { scores, shouldFollowUp } = await evaluateAnswer(session, lastQuestion, text);
+    const { scores, shouldFollowUp, nearPerfect } = await evaluateAnswer(session, lastQuestion, text);
     session.messages[session.messages.length - 1].skillScores = scores;
 
     // 4. Decide next action
     let isComplete = false;
-    if (session.questionCount >= session.maxQuestions) {
+    // End the interview if candidate message limit (5) is reached OR near-perfect performance
+    if (session.candidateMessageCount >= session.maxQuestions || nearPerfect) {
       // Interview is over — add a clear closing statement
-      const closingMessage = 'Thank you. That concludes the interview.';
+      const closingMessage = nearPerfect
+        ? 'Excellent work. Your responses have been outstanding. That concludes the interview.'
+        : 'Thank you. That concludes the interview.';
       session.messages.push({
         role: 'interviewer',
         content: closingMessage,
@@ -57,6 +62,11 @@ export async function POST(
         timestamp: Date.now(),
       });
       session.questionCount++;
+
+      // Track technical questions
+      if (TECHNICAL_PHASES.has(session.phase)) {
+        session.technicalQuestionAsked = true;
+      }
     }
 
     store.setSession(session.id, session);
@@ -66,7 +76,7 @@ export async function POST(
       nextQuestion: session.messages[session.messages.length - 1].content,
       isComplete,
       phase: session.phase,
-      questionNumber: session.questionCount,
+      questionNumber: session.candidateMessageCount,
       maxQuestions: session.maxQuestions,
     });
   } catch (err) {

@@ -18,7 +18,7 @@ export async function GET(
     role: session.config.role,
     company: session.config.company,
     messages: session.messages,
-    questionCount: session.questionCount,
+    questionCount: session.candidateMessageCount || 0,
     maxQuestions: session.maxQuestions,
     phase: session.phase,
     status: session.status,

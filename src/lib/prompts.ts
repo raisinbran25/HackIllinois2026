@@ -23,7 +23,7 @@ Rules:
 - "product" for product manager, product owner roles
 - "behavioral" if the JD primarily emphasizes soft skills or leadership
 - "generic" if it doesn't clearly fit the above
-- Difficulty: intern/junior = easy, mid-level = medium, senior/staff/lead = hard`;
+- Difficulty: Default to "easy" unless the JD clearly indicates senior/staff/lead level. intern/junior/mid-level = easy, senior = medium, staff/lead/principal = hard`;
 }
 
 export function questionGenerationPrompt(
@@ -31,7 +31,8 @@ export function questionGenerationPrompt(
   phase: string,
   conversationHistory: string,
   focusPlan?: FocusPlan,
-  previousAnswer?: string
+  previousAnswer?: string,
+  technicalQuestionAsked?: boolean
 ): string {
   const focusInstructions = focusPlan
     ? `\nADAPTATION INSTRUCTIONS:
@@ -44,6 +45,15 @@ Difficulty level: ${focusPlan.difficulty}. ${
           ? 'Be encouraging, give hints if needed.'
           : 'Standard difficulty.'
       }`
+    : '';
+
+  const technicalQuestionBlock = technicalQuestionAsked
+    ? '\nTECHNICAL QUESTION CONSTRAINT: A technical question has already been asked in this interview. Do NOT ask another technical/coding question. Focus on behavioral, follow-up, or other non-technical questions.'
+    : '\nTECHNICAL QUESTION CONSTRAINT: Exactly one technical question must be asked during this interview. If no technical question has been asked yet, this should be a technical question (e.g., a coding problem, system design, or technical problem-solving question).';
+
+  const pastQuestionsBlock = config.pastQuestions && config.pastQuestions.length > 0
+    ? `\nQUESTION REPETITION GUARD — The following questions have been asked in previous interviews. You MUST NOT repeat any of them exactly. You may ask about similar topics but must use a different question:
+${config.pastQuestions.map((q) => `- "${q}"`).join('\n')}`
     : '';
 
   const pastInsightsBlock = config.pastInsights && config.pastInsights.length > 0
@@ -59,7 +69,7 @@ ${config.company ? `Company: ${config.company}` : ''}
 Interview type: ${config.interviewType}
 Current phase: ${phase}
 Difficulty: ${config.difficulty}
-${focusInstructions}${pastInsightsBlock}
+${focusInstructions}${pastInsightsBlock}${pastQuestionsBlock}${technicalQuestionBlock}
 
 Conversation so far:
 ${conversationHistory || '(none yet)'}
@@ -71,9 +81,13 @@ Generate the next interviewer question or follow-up. Rules:
 - Match the current phase: ${phase}
 - If this is a follow-up, probe deeper on the candidate's previous answer
 - Be concise (1-3 sentences for the question)
-- For SWE coding phases, present a real algorithmic problem
+- Default to beginner/early-intermediate difficulty. Avoid overly complex edge cases unless the user is consistently scoring high. For SWE, prefer straightforward problems (simple arrays, strings, basic data structures) over tricky algorithm puzzles.
+- For SWE coding phases, present a real but approachable algorithmic problem
 - For behavioral phases, ask about specific past experiences
 - Do NOT evaluate the answer here, just ask the next question
+- STRICT RULE: If the candidate asks for help, hints, guidance, or how to approach the problem, you must NOT provide any help, hints, or guidance. You may acknowledge the request neutrally (e.g., "I understand, but I'd like to see your independent approach.") and restate the question if needed. Never reveal the answer or solution approach.
+- PARTIAL CREDIT FEEDBACK: If the candidate's answer is partially correct, you may briefly acknowledge which parts are correct and which parts need improvement. However, do NOT provide hints, guidance, or steer the candidate toward the correct answer. Your feedback must be descriptive (e.g., "Your approach to X was solid, but Y still needs work."), NOT instructional (e.g., do NOT say "Try thinking about..." or "Consider using...").
+- MESSAGE LIMIT: The candidate has a maximum of 5 messages for this interview. For consulting/case interviews, provide sufficient context and information in each question/response so the candidate can complete the interview within this limit.
 
 Respond with ONLY the interviewer's next statement/question, no JSON, no labels.`;
 }
@@ -107,15 +121,27 @@ Respond in JSON:
     { "skill": "skill_name", "score": 7, "evidence": "reason" }
   ],
   "shouldFollowUp": true,
-  "followUpReason": "optional reason to probe deeper"
+  "followUpReason": "optional reason to probe deeper",
+  "nearPerfect": false
 }
 
-Scoring guidelines:
-- 1-3: Major gaps, incorrect, or missing
-- 4-5: Partial, surface-level
-- 6-7: Solid, demonstrates competence
-- 8-9: Strong, with depth and nuance
-- 10: Exceptional, exceeds expectations`;
+Set "nearPerfect" to true ONLY if the candidate's answer is exceptional across all evaluated skills (all scores 9 or 10). This signals the interview may end early.
+
+Scoring guidelines (be generous — treat 7.5 as satisfactory, give partial credit liberally):
+- 1-3: Completely wrong or no attempt
+- 4-5: Weak attempt with major gaps
+- 6-7: Reasonable attempt, shows understanding even if incomplete
+- 7.5: Satisfactory — this is the target for a passing answer
+- 8-9: Strong, well-structured answer
+- 10: Exceptional, exceeds expectations
+Do NOT penalize minor mistakes harshly. Award partial credit generously for showing the right approach even if details are wrong.
+
+CLARIFICATION QUESTION SCORING: If the candidate asks clarifying questions rather than providing an answer, use context-aware scoring:
+- For consulting/case interviews: Asking clarifying questions is expected and should NOT reduce scores. It may even improve scores if the questions demonstrate structured thinking.
+- For SWE/coding interviews (LeetCode-style): Asking clarifying questions may slightly reduce the score, as candidates are expected to work through ambiguity independently.
+- For behavioral interviews: Asking for clarification is neutral.
+- For product interviews: Asking clarifying questions is positive and expected.
+Your scoring decision must be career-specific and reflected only in the evaluation scores, not in any live feedback to the candidate.`;
 }
 
 export function reportPrompt(
