@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 // Adam voice ID from ElevenLabs
-const VOICE_ID = 'hzLyDn3IrvrdH83BdqUu'; //Adam
+const VOICE_ID = 'pNInz6obpgDQGcFmaJgB';
 const MODEL_ID = 'eleven_turbo_v2';
 
 export async function POST(req: NextRequest) {
