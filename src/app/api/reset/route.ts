@@ -24,8 +24,9 @@ export async function POST(req: NextRequest) {
         if (results.results) {
           for (const result of results.results) {
             try {
-              if (result.id) {
-                await client.delete(result.id);
+              const id = (result as any).id;
+              if (id) {
+                await client.delete(id);
               }
             } catch {
               // Skip individual deletion failures
