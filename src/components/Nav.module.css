@@ -5,17 +5,19 @@
   padding: 0 1.5rem;
   height: 56px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-secondary);
-  backdrop-filter: blur(8px);
+  background: rgba(7, 0, 31, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
 .logo {
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: 1rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--text) !important;
   text-decoration: none !important;
   display: flex;
@@ -25,19 +27,21 @@
 }
 
 .logo:hover {
-  color: var(--primary) !important;
+  color: var(--accent) !important;
 }
 
 .logoMark {
-  color: var(--primary);
-  font-size: 0.65rem;
+  color: var(--accent);
+  font-size: 0.6rem;
   flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(61, 253, 152, 0.5));
 }
 
 .links {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 }
 
 .links a {
@@ -52,4 +56,21 @@
 .links a:hover {
   color: var(--text);
   background: var(--primary-muted);
+}
+
+/* Last link ("New Session") styled as a green pill CTA */
+.links a:last-child {
+  color: #07001f;
+  background: var(--accent);
+  font-weight: 700;
+  padding: 0.38rem 0.9rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 16px rgba(61, 253, 152, 0.2);
+}
+
+.links a:last-child:hover {
+  background: var(--accent-hover);
+  color: #07001f;
+  box-shadow: 0 0 22px rgba(61, 253, 152, 0.35);
+  transform: translateY(-1px);
 }
