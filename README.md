@@ -28,17 +28,17 @@ interviews.
 
 ## Features
 
--   Adaptive category-based question system\
--   Intelligent retry logic for weak categories\
--   Category completion tracking\
--   Voice input via speech-to-text\
--   Optional interviewer voice output using ElevenLabs Text-to-Speech\
--   Real-time scoring with relaxed grading\
+-   Adaptive category-based question system
+-   Intelligent retry logic for weak categories
+-   Category completion tracking
+-   Voice input via speech-to-text
+-   Optional interviewer voice output using ElevenLabs Text-to-Speech
+-   Real-time scoring with relaxed grading
 -   Progress dashboard displaying:
-    -   Overall average score\
-    -   Completed categories\
-    -   In-progress categories\
--   Cross-interview comparison feedback using long-term memory\
+    -   Overall average score
+    -   Completed categories
+    -   In-progress categories
+-   Cross-interview comparison feedback using long-term memory
 -   Personalized questions using the user's name
 
 ------------------------------------------------------------------------
@@ -47,29 +47,29 @@ interviews.
 
 ### Frontend
 
--   **React** --- User interface and interview session flow\
--   **TypeScript** --- Type safety and maintainability\
+-   **React** --- User interface and interview session flow
+-   **TypeScript** --- Type safety and maintainability
 -   **CSS Modules** --- Component-scoped styling
 
 ### Backend
 
--   **Next.js API Routes** --- Server-side logic and endpoints\
+-   **Next.js API Routes** --- Server-side logic and endpoints
 -   **OpenAI API** --- Question generation, evaluation, scoring, and
-    report writing\
+    report writing
 -   **Supermemory API** --- Long-term memory for cross-interview
-    comparisons and adaptive behavior\
+    comparisons and adaptive behavior
 -   **ElevenLabs API** --- Text-to-Speech using Adam (Humorous
     Interviewer), model `eleven_turbo_v2`
 
 ### Voice
 
--   **OpenAI Whisper** --- Speech-to-text transcription\
+-   **OpenAI Whisper** --- Speech-to-text transcription
 -   **ElevenLabs Text-to-Speech** --- Interviewer voice output
 
 ### State Management
 
 -   **In-memory session data** --- Live statistics during active
-    interviews\
+    interviews
 -   **Supermemory** --- Persistent historical interview storage
 
 ------------------------------------------------------------------------
@@ -77,18 +77,18 @@ interviews.
 ## How the Adaptive System Works
 
 1.  At the start of an interview, the system selects a random category
-    relevant to the chosen role.\
-2.  The user answers the generated question and receives a score.\
+    relevant to the chosen role.
+2.  The user answers the generated question and receives a score.
 3.  Based on performance:
     -   **Score ≥ 7.5** → Category is marked as completed and the system
-        moves forward.\
+        moves forward.
     -   **Score \< 7.5** → The same category is repeated with a slightly
-        easier question.\
-4.  Categories are tracked throughout the interview lifecycle.\
+        easier question.
+4.  Categories are tracked throughout the interview lifecycle.
 5.  Supermemory stores past performance and enables future reports to
     reference:
-    -   Improvements over time\
-    -   Repeated weaknesses\
+    -   Improvements over time
+    -   Repeated weaknesses
     -   Cross-interview comparisons
 
 ------------------------------------------------------------------------`
@@ -98,18 +98,18 @@ interviews.
 ### Frontend
 
 -   **Session Page** manages:
-    -   Interview flow\
-    -   Voice input handling\
-    -   Real-time scoring display\
+    -   Interview flow
+    -   Voice input handling
+    -   Real-time scoring display
     -   Progress dashboard
 
 ### Backend API Routes
 
 -   **Create Session** --- Initializes interview state and selects the
-    starting category\
+    starting category
 -   **Answer Question** --- Evaluates responses and determines next
-    step\
--   **End Session** --- Finalizes interview data\
+    step
+-   **End Session** --- Finalizes interview data
 -   **Generate Report** --- Produces performance summary and feedback
 
 ### Adaptive Category Logic
@@ -128,10 +128,10 @@ feedback.
 
 ## Future Improvements
 
--   Enhanced analytics dashboard\
--   Streaming Text-to-Speech support\
--   Real-time difficulty scaling\
--   Interview mode presets (e.g., behavioral-only, technical-only)\
+-   Enhanced analytics dashboard
+-   Streaming Text-to-Speech support
+-   Real-time difficulty scaling
+-   Interview mode presets (e.g., behavioral-only, technical-only)
 -   Expanded role-specific category libraries
 
 ------------------------------------------------------------------------
