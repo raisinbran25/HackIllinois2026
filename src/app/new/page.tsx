@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
 
@@ -49,25 +49,24 @@ function NewSessionForm() {
     }
   }, [router, isReset]);
 
-  const handleSubmit = async () => {
-    if (!role.trim() || !jobDescription.trim()) return;
+  const createSession = async (r: string, c: string, jd: string, user: string) => {
     setLoading(true);
     setError('');
 
     // Lock job context in localStorage for future interviews
-    localStorage.setItem('jobRole', role.trim());
-    localStorage.setItem('jobCompany', company.trim());
-    localStorage.setItem('jobDescription', jobDescription.trim());
+    localStorage.setItem('jobRole', r);
+    localStorage.setItem('jobCompany', c);
+    localStorage.setItem('jobDescription', jd);
 
     try {
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userName,
-          role: role.trim(),
-          company: company.trim() || undefined,
-          jobDescription: jobDescription.trim(),
+          userName: user,
+          role: r,
+          company: c || undefined,
+          jobDescription: jd,
         }),
       });
 
@@ -84,10 +83,43 @@ function NewSessionForm() {
     }
   };
 
+  // Auto-submit when job context is locked (Next Interview flow)
+  // Skip the form entirely — go straight to interview
+  const autoSubmitDone = useRef(false);
+  useEffect(() => {
+    if (locked && userName && role && jobDescription && !autoSubmitDone.current) {
+      autoSubmitDone.current = true;
+      createSession(role.trim(), company.trim(), jobDescription.trim(), userName);
+    }
+  }, [locked, userName, role, jobDescription]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSubmit = async () => {
+    if (!role.trim() || !jobDescription.trim()) return;
+    await createSession(role.trim(), company.trim(), jobDescription.trim(), userName);
+  };
+
+  // If locked, show a loading/error state (auto-submit is in progress)
+  if (locked) {
+    return (
+      <main className={styles.container}>
+        <h1 className={styles.title}>Starting Next Interview...</h1>
+        <p className={styles.subtitle}>Using your existing job context. Preparing questions...</p>
+        {error && (
+          <div style={{ marginTop: '1rem' }}>
+            <p className={styles.error}>{error}</p>
+            <button className={styles.button} onClick={() => createSession(role.trim(), company.trim(), jobDescription.trim(), userName)} disabled={loading}>
+              {loading ? 'Retrying...' : 'Retry'}
+            </button>
+          </div>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className={styles.container}>
-      <h1 className={styles.title}>{locked ? 'Next Interview' : 'New Interview Session'}</h1>
-      <p className={styles.subtitle}>Welcome, {userName}. {locked ? 'Your job context is locked from before.' : 'Fill in the details below.'}</p>
+      <h1 className={styles.title}>New Interview Session</h1>
+      <p className={styles.subtitle}>Welcome, {userName}. Fill in the details below.</p>
 
       <div className={styles.form}>
         <div className={styles.field}>
@@ -97,7 +129,6 @@ function NewSessionForm() {
             placeholder="e.g., Software Engineer"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            disabled={locked}
           />
         </div>
 
@@ -108,7 +139,6 @@ function NewSessionForm() {
             placeholder="e.g., Google"
             value={company}
             onChange={(e) => setCompany(e.target.value)}
-            disabled={locked}
           />
         </div>
 
@@ -118,7 +148,6 @@ function NewSessionForm() {
             placeholder="Paste the job description here..."
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
-            disabled={locked}
           />
         </div>
 

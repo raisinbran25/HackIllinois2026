@@ -27,11 +27,33 @@ interface Drill {
   targetSkill?: string;
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  arrays_strings: 'Arrays / Strings',
+  hash_maps: 'Hash Maps',
+  linked_lists: 'Linked Lists',
+  stacks_queues: 'Stacks / Queues',
+  trees: 'Trees',
+  graphs: 'Graphs',
+  dynamic_programming: 'Dynamic Programming',
+  recursion_backtracking: 'Recursion / Backtracking',
+  heaps_priority_queues: 'Heaps / Priority Queues',
+  revenue_problems: 'Revenue Problems',
+  cost_problems: 'Cost Problems',
+  strategic_decisions: 'Strategic Decisions',
+  investment_decisions: 'Investment Decisions',
+  operational_bottlenecks: 'Operational Bottlenecks',
+  technical_proficiency: 'Technical Proficiency (GAAP/IFRS)',
+  behavioral_star: 'Behavioral (STAR-based)',
+  software_process: 'Software / Process (Excel, ERP)',
+  industry_specific: 'Industry-Specific (AP/AR)',
+};
+
 interface Report {
   sessionId: string;
   userName: string;
   role: string;
   interviewType: string;
+  questionCategory?: string;
   overallScore: number;
   skillScores: { skill: string; score: number; evidence: string }[];
   strengths: string[];
@@ -144,6 +166,11 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       <div className={styles.meta}>
         <span className={styles.tag}>{report.interviewType.toUpperCase()}</span>
         <span className={styles.tag}>{report.role}</span>
+        {report.questionCategory && (
+          <span className={styles.tag}>
+            {CATEGORY_LABELS[report.questionCategory] || report.questionCategory.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+          </span>
+        )}
       </div>
 
       <div className={styles.overallScore}>

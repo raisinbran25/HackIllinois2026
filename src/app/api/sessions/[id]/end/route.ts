@@ -49,6 +49,7 @@ export async function POST(
       userName: session.config.userName,
       role: session.config.role,
       interviewType: session.config.interviewType,
+      questionCategory: session.config.questionCategory,
       overallScore: reportData.overallScore,
       skillScores: reportData.skillScores || [],
       strengths: reportData.strengths || [],
@@ -84,23 +85,26 @@ export async function POST(
         const updatedProfile = updateWeaknessProfile(existingProfile, session.config.userName, avgScores);
         await storeWeaknessProfile(session.config.userName, updatedProfile);
 
-        // Store category record for adaptive category algorithm
+        // Store category record — LOCAL store is primary source for stats + adaptive logic
         if (session.config.questionCategory) {
-          const categoryHistory = session.config.categoryHistory || [];
-          const sameCategory = categoryHistory.filter((r) => r.category === session.config.questionCategory);
+          const localHistory = store.getCategoryHistory(session.config.userName);
+          const sameCategory = localHistory.filter((r) => r.category === session.config.questionCategory);
           const lastSameCategory = sameCategory.length > 0 ? sameCategory[sameCategory.length - 1] : null;
 
           const categoryRecord: CategoryRecord = {
             category: session.config.questionCategory,
             score: report.overallScore,
             completed: report.overallScore >= 7.5,
-            interviewNumber: categoryHistory.length + 1,
+            interviewNumber: localHistory.length + 1,
             mistakes: report.weaknesses,
             strengths: report.strengths,
             weaknesses: report.weaknesses,
             timestamp: Date.now(),
             improvementDelta: lastSameCategory ? report.overallScore - lastSameCategory.score : undefined,
           };
+          // Store locally (primary — drives stats + adaptive logic)
+          store.addCategoryRecord(session.config.userName, categoryRecord);
+          // Also store in Supermemory (for cross-interview feedback in future reports)
           await storeCategoryRecord(session.config.userName, categoryRecord);
         }
       }

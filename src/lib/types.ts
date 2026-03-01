@@ -87,6 +87,7 @@ export interface SessionConfig {
   pastQuestions?: string[];
   questionCategory?: QuestionCategory;
   categoryHistory?: CategoryRecord[];
+  isRetry?: boolean;
 }
 
 export interface Session {
@@ -120,6 +121,7 @@ export interface SessionReport {
   userName: string;
   role: string;
   interviewType: InterviewType;
+  questionCategory?: QuestionCategory;
   overallScore: number;
   skillScores: SkillScore[];
   strengths: string[];

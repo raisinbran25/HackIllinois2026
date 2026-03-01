@@ -68,15 +68,20 @@ ${config.interviewType === 'swe' ? `For SWE, this means a LeetCode-style problem
 ${config.interviewType === 'consulting' ? `For consulting, this means a case study focused on ${config.questionCategory.replace(/_/g, ' ')}.` : ''}`
     : '';
 
+  const retryBlock = config.isRetry
+    ? `\nRETRY MODE: The candidate previously scored below 7.5 on this category. This is a retry. Ask a SIMPLER, more straightforward question than before. Reduce complexity, avoid edge cases, and keep the problem as accessible as possible.`
+    : '';
+
   return `You are a professional ${config.interviewType} interviewer conducting a mock interview.
 You are encouraging, constructive, and supportive. You want the candidate to succeed and show their best work. Avoid being adversarial or overly critical.
+The candidate's name is ${config.userName}. Address them by name occasionally (once per question, not every sentence). Example: "Alright ${config.userName}, let's work through this problem."
 
 Role being interviewed for: ${config.role}
 ${config.company ? `Company: ${config.company}` : ''}
 Interview type: ${config.interviewType}
 Current phase: ${phase}
 Difficulty: ${config.difficulty}
-${focusInstructions}${pastInsightsBlock}${pastQuestionsBlock}${technicalQuestionBlock}${categoryBlock}
+${focusInstructions}${pastInsightsBlock}${pastQuestionsBlock}${technicalQuestionBlock}${categoryBlock}${retryBlock}
 
 Conversation so far:
 ${conversationHistory || '(none yet)'}
@@ -88,8 +93,8 @@ Generate the next interviewer question or follow-up. Rules:
 - Match the current phase: ${phase}
 - If this is a follow-up, probe deeper on the candidate's previous answer
 - Be concise (1-3 sentences for the question)
-- Default to beginner/early-intermediate difficulty. Avoid overly complex edge cases unless the user is consistently scoring high. For SWE, prefer straightforward problems (simple arrays, strings, basic data structures) over tricky algorithm puzzles.
-- For SWE coding phases, present a real but approachable algorithmic problem
+- Default to VERY EASY beginner difficulty. Ask the simplest possible version of problems. No tricky edge cases, no layered constraints, no complex logic. For SWE, ask basic problems with simple arrays, strings, or elementary data structure operations — think "reverse a string" or "find max in array" level, NOT complex algorithm puzzles. For consulting, use small numbers, clear framing, and minimal math. For accounting, ask foundational questions only — no obscure rule exceptions.
+- For SWE coding phases, present a very basic, approachable algorithmic problem with no tricks
 - For behavioral phases, ask about specific past experiences
 - Do NOT evaluate the answer here, just ask the next question
 - STRICT RULE: If the candidate asks for help, hints, guidance, or how to approach the problem, you must NOT provide any help, hints, or guidance. You may acknowledge the request neutrally (e.g., "I understand, but I'd like to see your independent approach.") and restate the question if needed. Never reveal the answer or solution approach.
@@ -134,14 +139,14 @@ Respond in JSON:
 
 Set "nearPerfect" to true ONLY if the candidate's answer is exceptional across all evaluated skills (all scores 9 or 10). This signals the interview may end early.
 
-Scoring guidelines (be generous — treat 7.5 as satisfactory, give partial credit liberally):
-- 1-3: Completely wrong or no attempt
-- 4-5: Weak attempt with major gaps
-- 6-7: Reasonable attempt, shows understanding even if incomplete
-- 7.5: Satisfactory — this is the target for a passing answer
-- 8-9: Strong, well-structured answer
-- 10: Exceptional, exceeds expectations
-Do NOT penalize minor mistakes harshly. Award partial credit generously for showing the right approach even if details are wrong.
+Scoring guidelines (be VERY generous — treat 7.5 as clearly satisfactory, give partial credit liberally):
+- 1-3: Completely wrong or no attempt at all
+- 4-5: Very weak attempt with fundamental misunderstanding
+- 6-7: Shows understanding — even partial or incomplete attempts deserve this range
+- 7.5: Satisfactory — this is the TARGET score for a reasonable answer. Most answers that show effort should be here or above.
+- 8-9: Good, well-structured answer
+- 10: Exceptional
+CRITICAL: Do NOT penalize small mistakes, syntax errors, minor logic issues, or incomplete optimization. If the candidate shows they understand the concept and are on the right track, score 7+ generously. Award partial credit for ANY correct reasoning, even if the final answer is wrong. The goal is encouragement, not perfection.
 
 CLARIFICATION QUESTION SCORING: If the candidate asks clarifying questions rather than providing an answer, use context-aware scoring:
 - For consulting/case interviews: Asking clarifying questions is expected and should NOT reduce scores. It may even improve scores if the questions demonstrate structured thinking.

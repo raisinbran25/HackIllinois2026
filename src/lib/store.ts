@@ -1,7 +1,8 @@
-import { Session, SessionReport } from './types';
+import { Session, SessionReport, CategoryRecord } from './types';
 
 const sessions = new Map<string, Session>();
 const reports = new Map<string, SessionReport>();
+const categoryHistoryByUser = new Map<string, CategoryRecord[]>();
 
 export const store = {
   getSession: (id: string) => sessions.get(id),
@@ -18,8 +19,18 @@ export const store = {
     return userReports.sort((a, b) => a.createdAt - b.createdAt);
   },
 
+  // Local category history — primary source for stats + adaptive logic
+  getCategoryHistory: (userName: string): CategoryRecord[] => {
+    return categoryHistoryByUser.get(userName) || [];
+  },
+
+  addCategoryRecord: (userName: string, record: CategoryRecord): void => {
+    const history = categoryHistoryByUser.get(userName) || [];
+    history.push(record);
+    categoryHistoryByUser.set(userName, history);
+  },
+
   clearUser: (userName: string): void => {
-    // Clear all sessions and reports for this user
     const sessionIdsToDelete: string[] = [];
     sessions.forEach((s, id) => {
       if (s.config.userName === userName) sessionIdsToDelete.push(id);
@@ -28,5 +39,6 @@ export const store = {
       sessions.delete(id);
       reports.delete(id);
     }
+    categoryHistoryByUser.delete(userName);
   },
 };

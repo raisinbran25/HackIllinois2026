@@ -32,6 +32,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   strategic_decisions: 'Strategic Decisions',
   investment_decisions: 'Investment Decisions',
   operational_bottlenecks: 'Operational Bottlenecks',
+  technical_proficiency: 'Technical Proficiency (GAAP/IFRS)',
+  behavioral_star: 'Behavioral (STAR-based)',
+  software_process: 'Software / Process (Excel, ERP)',
+  industry_specific: 'Industry-Specific (AP/AR)',
   product_sense: 'Product Sense',
   metrics: 'Metrics',
   tradeoffs: 'Tradeoffs',
@@ -69,14 +73,14 @@ interface ProgressData {
   }[];
   skillTrends: Record<string, number[]>;
   categoryHistory: CategoryRecord[];
-  categoryStats: Record<string, { scores: number[]; completed: boolean; mistakes: string[]; strengths: string[]; weaknesses: string[] }>;
+  categoryStats: Record<string, { scores: number[]; completed: boolean; latestScore: number; mistakes: string[]; strengths: string[]; weaknesses: string[] }>;
   overallAvg: number;
   mostImproved: string | null;
   mostImprovedDelta: number | null;
   repeatedMistakes: { mistake: string; count: number }[];
   totalInterviews: number;
-  categoriesCompleted: number;
-  categoriesStruggling: string[];
+  completedCategories: string[];
+  inProgressCategories: string[];
 }
 
 function scoreColor(score: number): string {
@@ -139,7 +143,7 @@ export default function ProgressPage() {
     }))
     .sort((a, b) => a.avg - b.avg);
 
-  // Determine next interview category
+  // Determine next interview category info
   const lastRecord = data.categoryHistory.length > 0 ? data.categoryHistory[data.categoryHistory.length - 1] : null;
   let nextCategoryInfo = 'Random category (first interview)';
   if (lastRecord) {
@@ -157,6 +161,7 @@ export default function ProgressPage() {
       avg: Math.round((stats.scores.reduce((a, b) => a + b, 0) / stats.scores.length) * 10) / 10,
       attempts: stats.scores.length,
       completed: stats.completed,
+      latestScore: stats.latestScore,
     }))
     .sort((a, b) => a.avg - b.avg);
 
@@ -165,14 +170,11 @@ export default function ProgressPage() {
       <h1 className={styles.title}>Your Progress</h1>
       <p className={styles.subtitle}>{data.sessions.length} session{data.sessions.length !== 1 ? 's' : ''} completed</p>
 
-      {/* Next Interview Section */}
+      {/* Next Interview Section — info only, no button here */}
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Next Interview</h2>
         <div className={styles.nextInterviewCard}>
           <p>{nextCategoryInfo}</p>
-          <a href="/new" className={styles.actionButton} style={{ marginTop: '0.75rem', display: 'inline-block' }}>
-            Start Next Interview
-          </a>
         </div>
       </div>
 
@@ -181,7 +183,7 @@ export default function ProgressPage() {
         <h2 className={styles.sectionTitle}>Statistics</h2>
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
-            <div className={styles.statValue}>{data.overallAvg || '—'}</div>
+            <div className={styles.statValue}>{data.overallAvg || '\u2014'}</div>
             <div className={styles.statLabel}>Overall Avg Score</div>
           </div>
           <div className={styles.statCard}>
@@ -189,12 +191,12 @@ export default function ProgressPage() {
             <div className={styles.statLabel}>Total Interviews</div>
           </div>
           <div className={styles.statCard}>
-            <div className={styles.statValue}>{data.categoriesCompleted}</div>
+            <div className={styles.statValue}>{data.completedCategories.length}</div>
             <div className={styles.statLabel}>Categories Completed</div>
           </div>
           <div className={styles.statCard}>
-            <div className={styles.statValue}>{data.categoriesStruggling.length}</div>
-            <div className={styles.statLabel}>Categories Struggling</div>
+            <div className={styles.statValue}>{data.inProgressCategories.length}</div>
+            <div className={styles.statLabel}>Categories In Progress</div>
           </div>
         </div>
 
@@ -205,6 +207,45 @@ export default function ProgressPage() {
           </div>
         )}
       </div>
+
+      {/* Latest Category Status */}
+      {lastRecord && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Latest Category Status</h2>
+          <div className={styles.nextInterviewCard}>
+            <p style={{ fontWeight: 600 }}>
+              {catLabel(lastRecord.category)} — {lastRecord.score >= 7.5 ? 'Completed' : 'In Progress'}
+            </p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              Score: {lastRecord.score}/10
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Completed Categories */}
+      {data.completedCategories.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Completed Categories</h2>
+          <ul className={styles.list}>
+            {data.completedCategories.map((cat) => (
+              <li key={cat}>{catLabel(cat)} \u2713</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* In Progress Categories */}
+      {data.inProgressCategories.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>In Progress Categories</h2>
+          <ul className={styles.list}>
+            {data.inProgressCategories.map((cat) => (
+              <li key={cat}>{catLabel(cat)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Scores Per Category */}
       {categoryAverages.length > 0 && (
@@ -227,18 +268,6 @@ export default function ProgressPage() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Categories Struggling */}
-      {data.categoriesStruggling.length > 0 && (
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>Categories Needing Work</h2>
-          <ul className={styles.list}>
-            {data.categoriesStruggling.map((cat) => (
-              <li key={cat}>{catLabel(cat)}</li>
-            ))}
-          </ul>
         </div>
       )}
 

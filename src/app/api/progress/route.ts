@@ -1,31 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/lib/store';
-import { getWeaknessProfile, getCategoryHistory } from '@/lib/adaptation';
+import { getWeaknessProfile } from '@/lib/adaptation';
 
 export async function GET(req: NextRequest) {
   const userName = req.nextUrl.searchParams.get('user');
   if (!userName) return NextResponse.json({ error: 'Missing user' }, { status: 400 });
 
   const reports = store.getReportsByUser(userName);
-  const [profile, categoryHistory] = await Promise.all([
-    getWeaknessProfile(userName),
-    getCategoryHistory(userName),
-  ]);
+  const profile = await getWeaknessProfile(userName);
 
-  // Compute category statistics
-  const categoryStats: Record<string, { scores: number[]; completed: boolean; mistakes: string[]; strengths: string[]; weaknesses: string[] }> = {};
+  // Use LOCAL category history (not Supermemory) for live statistics
+  const categoryHistory = store.getCategoryHistory(userName);
+
+  // Compute category statistics from local data
+  const categoryStats: Record<string, { scores: number[]; completed: boolean; latestScore: number; mistakes: string[]; strengths: string[]; weaknesses: string[] }> = {};
   for (const record of categoryHistory) {
     if (!categoryStats[record.category]) {
-      categoryStats[record.category] = { scores: [], completed: false, mistakes: [], strengths: [], weaknesses: [] };
+      categoryStats[record.category] = { scores: [], completed: false, latestScore: 0, mistakes: [], strengths: [], weaknesses: [] };
     }
     categoryStats[record.category].scores.push(record.score);
+    categoryStats[record.category].latestScore = record.score;
     if (record.completed) categoryStats[record.category].completed = true;
     if (record.mistakes) categoryStats[record.category].mistakes.push(...record.mistakes);
     if (record.strengths) categoryStats[record.category].strengths.push(...record.strengths);
     if (record.weaknesses) categoryStats[record.category].weaknesses.push(...record.weaknesses);
   }
 
-  // Compute overall average score
+  // Compute overall average score from local data
   const allScores = categoryHistory.map((r) => r.score);
   const overallAvg = allScores.length > 0
     ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10
@@ -58,6 +59,16 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b[1] - a[1])
     .map(([mistake, count]) => ({ mistake, count }));
 
+  // Completed categories: completed flag is true
+  const completedCategories = Object.entries(categoryStats)
+    .filter(([, s]) => s.completed)
+    .map(([cat]) => cat);
+
+  // In-progress categories: latest score < 7.5 and not yet completed
+  const inProgressCategories = Object.entries(categoryStats)
+    .filter(([, s]) => !s.completed && s.latestScore < 7.5)
+    .map(([cat]) => cat);
+
   const data = {
     userName,
     sessions: reports.map((r) => ({
@@ -75,10 +86,8 @@ export async function GET(req: NextRequest) {
     mostImprovedDelta: bestDelta > -Infinity ? bestDelta : null,
     repeatedMistakes,
     totalInterviews: categoryHistory.length,
-    categoriesCompleted: Object.values(categoryStats).filter((s) => s.completed).length,
-    categoriesStruggling: Object.entries(categoryStats)
-      .filter(([, s]) => s.scores.length >= 2 && s.scores[s.scores.length - 1] < 7.5)
-      .map(([cat]) => cat),
+    completedCategories,
+    inProgressCategories,
   };
 
   return NextResponse.json(data);
