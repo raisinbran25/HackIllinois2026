@@ -66,6 +66,49 @@
   cursor: not-allowed;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ttsToggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: transparent;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  color: var(--text-secondary);
+}
+
+.ttsToggle:hover {
+  border-color: var(--primary);
+  background: var(--primary-muted);
+}
+
+.ttsOn {
+  border-color: var(--primary);
+  background: var(--primary-muted);
+  color: var(--primary);
+}
+
+.speaking {
+  align-self: flex-start;
+  background: var(--bg-card);
+  border: 1px solid var(--primary-muted);
+  color: var(--primary);
+  font-style: italic;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.9rem;
+  animation: subtlePulse 1.5s infinite;
+}
+
 /* ---- Messages ---- */
 .messages {
   flex: 1;

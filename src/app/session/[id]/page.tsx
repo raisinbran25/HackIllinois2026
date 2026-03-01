@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRecorder } from '@/hooks/useRecorder';
+import { useTTS } from '@/hooks/useTTS';
 import styles from './page.module.css';
 
 interface MessageItem {
@@ -73,7 +74,9 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [initError, setInitError] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const { isRecording, startRecording, stopRecording, error: micError } = useRecorder();
+  const { enabled: ttsEnabled, isSpeaking, toggle: toggleTTS, speak } = useTTS();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMsgCountRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -105,6 +108,17 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     }
     fetchSession();
   }, [id]);
+
+  // Speak new interviewer messages via TTS
+  useEffect(() => {
+    if (messages.length > prevMsgCountRef.current) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === 'interviewer') {
+        speak(lastMsg.content, `msg-${messages.length - 1}`);
+      }
+    }
+    prevMsgCountRef.current = messages.length;
+  }, [messages, speak]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -280,11 +294,22 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             <span>Q {sessionMeta.questionCount}/{sessionMeta.maxQuestions}</span>
           </div>
         </div>
-        {!isComplete && (
-          <button className={styles.endButton} onClick={handleEndEarly} disabled={isEnding}>
-            {isEnding ? 'Ending...' : 'End Interview'}
-          </button>
-        )}
+        <div className={styles.headerActions}>
+          {!isComplete && (
+            <button
+              className={`${styles.ttsToggle} ${ttsEnabled ? styles.ttsOn : ''}`}
+              onClick={toggleTTS}
+              title={ttsEnabled ? 'Disable voice' : 'Enable voice'}
+            >
+              {ttsEnabled ? '🔊' : '🔇'}
+            </button>
+          )}
+          {!isComplete && (
+            <button className={styles.endButton} onClick={handleEndEarly} disabled={isEnding}>
+              {isEnding ? 'Ending...' : 'End Interview'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={styles.messages}>
@@ -293,10 +318,15 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             {renderContent(msg.content)}
           </div>
         ))}
-        {/* Only show thinking indicator while interview is active — Task 4: post-interview output guard */}
+        {/* Only show thinking indicator while interview is active */}
         {!isComplete && !isEnding && (isLoading || isTranscribing) && (
           <div className={`${styles.message} ${styles.thinking}`}>
             {isTranscribing ? 'Transcribing...' : 'Thinking...'}
+          </div>
+        )}
+        {isSpeaking && (
+          <div className={`${styles.message} ${styles.speaking}`}>
+            Speaking...
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -328,7 +358,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           <button
             className={`${styles.micButton} ${isRecording ? styles.micRecording : ''}`}
             onClick={handleVoice}
-            disabled={isLoading || isTranscribing || isEnding}
+            disabled={isLoading || isTranscribing || isEnding || isSpeaking}
             title={isRecording ? 'Stop recording' : 'Start recording'}
           >
             {isRecording ? '⏹' : '🎤'}
@@ -340,13 +370,13 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isLoading || isRecording || isTranscribing || isEnding}
+            disabled={isLoading || isRecording || isTranscribing || isEnding || isSpeaking}
             rows={1}
           />
           <button
             className={styles.sendButton}
             onClick={() => submitAnswer(input)}
-            disabled={isLoading || isRecording || isTranscribing || isEnding || !input.trim()}
+            disabled={isLoading || isRecording || isTranscribing || isEnding || isSpeaking || !input.trim()}
           >
             Send
           </button>
